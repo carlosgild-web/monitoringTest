@@ -11,9 +11,10 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
-BASE          = Path(__file__).parent.parent.resolve()
-SETTINGS_FILE = BASE / "monitoring_settings.json"
-STATE_FILE    = BASE / "logs" / "process_state.json"
+BASE           = Path(__file__).parent.parent.resolve()
+SETTINGS_FILE  = BASE / "monitoring_settings.json"
+STATE_FILE     = BASE / "logs" / "process_state.json"
+PERF_STATE_FILE = BASE / "logs" / "performance_state.json"
 PORT          = 5758
 
 
@@ -85,12 +86,21 @@ def get_status():
         })
 
     running_count = sum(1 for p in processes if p["is_running"] is True)
+
+    perf_state = {}
+    try:
+        perf_state = json.loads(PERF_STATE_FILE.read_text(encoding="utf-8-sig"))
+    except Exception:
+        pass
+    performance = perf_state.get("metrics", [])
+
     return {
         "engine":        {"ok": engine_ok, "updated": updated_str,
                           "age_sec": age_sec, "pid": state.get("monitor_pid")},
         "processes":     processes,
         "total":         len(processes),
         "running_count": running_count,
+        "performance":   performance,
         "server_time":   datetime.now().strftime("%H:%M:%S"),
         "version":       cfg.get("_meta", {}).get("version", "?"),
     }
@@ -201,6 +211,16 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .fade-in{animation:fadeIn .25s ease}
+
+/* ── PERFORMANCE ROW ── */
+.ac-orange{background:#8c5a00}
+.perf-row{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;display:flex;align-items:stretch;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.perf-row:hover{border-color:#3a5590;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+.meter-wrap{flex:1;min-width:140px}
+.meter-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:7px}
+.meter-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.fill-ok{background:var(--green)}.fill-warn{background:var(--orange)}.fill-crit{background:var(--red)}
+.lvl-ok{color:var(--green);font-weight:700;font-size:13px}.lvl-warn{color:var(--orange);font-weight:700;font-size:13px}.lvl-crit{color:var(--red);font-weight:700;font-size:13px}
 </style>
 </head>
 <body>
@@ -240,6 +260,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 <div class="main">
   <div class="section-label">Processes</div>
   <div id="proc-list"><div class="empty">Loading…</div></div>
+
+  <div class="section-label" style="margin-top:20px">Performance</div>
+  <div id="perf-list"><div class="empty">Loading…</div></div>
 </div>
 
 <div class="footer">
@@ -375,6 +398,37 @@ function render(d){
   </div>
 </div>`;
   }).join('');
+
+  // performance rows
+  const pl = document.getElementById('perf-list');
+  if(!d.performance || !d.performance.length){
+    pl.innerHTML='<div class="empty">No data — is performance_monitor.ps1 running?</div>';
+  } else {
+    pl.innerHTML = d.performance.map(m => {
+      const lvl = (m.current_level||'ok').toLowerCase();
+      const ac  = lvl==='critical'?'ac-red':lvl==='warning'?'ac-orange':'ac-green';
+      const fc  = lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
+      const lc  = lvl==='critical'?'lvl-crit':lvl==='warning'?'lvl-warn':'lvl-ok';
+      const val = m.current_value!=null ? Math.round(m.current_value) : null;
+      const pct = m.current_value!=null ? Math.min(100, Math.round(m.current_value)) : 0;
+      return `<div class="perf-row fade-in">
+  <div class="row-accent ${ac}"></div>
+  <div class="row-body">
+    <div class="proc-name-col">
+      <div class="proc-name">${esc(m.display_name)}</div>
+      <div class="proc-exe">Last check: ${esc(m.last_check||'—')}</div>
+    </div>
+    <div class="status-col">
+      <div class="meter-wrap">
+        <span style="font-size:20px;font-weight:700;color:#fff">${val!=null?val+'%':'—'}</span>
+        <div class="meter-bar"><div class="meter-fill ${fc}" style="width:${pct}%"></div></div>
+      </div>
+    </div>
+    <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
+  </div>
+</div>`;
+    }).join('');
+  }
 }
 
 function showModal(p){

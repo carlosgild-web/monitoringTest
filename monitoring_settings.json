@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "version": "1.1.0",
-    "last_updated": "2026-05-28",
+    "version": "1.2.0",
+    "last_updated": "2026-05-29",
     "description": "Server monitoring configuration — defines what to watch, thresholds, and automated actions.",
     "update_notes": "Bump version and update last_updated whenever you change this file."
   },

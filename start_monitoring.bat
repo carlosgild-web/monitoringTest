@@ -16,18 +16,21 @@ echo.
 :: ══════════════════════════════════════════════════════════════════════════════
 
 :: 1. Process Monitor
-call :LaunchScript "Process Monitor"   "%~dp0scripts\process_monitor.ps1"
+call :LaunchScript "Process Monitor"      "%~dp0scripts\process_monitor.ps1"
 
-:: 2. CPU Monitor        -- uncomment when scripts\monitor_cpu.ps1 exists
+:: 2. Performance Monitor (CPU + Memory)
+call :LaunchScript "Performance Monitor"  "%~dp0scripts\performance_monitor.ps1"
+
+:: 3. CPU Monitor        -- uncomment when scripts\monitor_cpu.ps1 exists
 :: call :LaunchScript "CPU Monitor"    "%~dp0scripts\monitor_cpu.ps1"
 
-:: 3. Memory Monitor     -- uncomment when scripts\monitor_memory.ps1 exists
+:: 4. Memory Monitor     -- uncomment when scripts\monitor_memory.ps1 exists
 :: call :LaunchScript "Memory Monitor" "%~dp0scripts\monitor_memory.ps1"
 
-:: 4. Disk Monitor       -- uncomment when scripts\monitor_disk.ps1 exists
+:: 5. Disk Monitor       -- uncomment when scripts\monitor_disk.ps1 exists
 :: call :LaunchScript "Disk Monitor"   "%~dp0scripts\monitor_disk.ps1"
 
-:: 5. Network Monitor    -- uncomment when scripts\monitor_network.ps1 exists
+:: 6. Network Monitor    -- uncomment when scripts\monitor_network.ps1 exists
 :: call :LaunchScript "Network Monitor" "%~dp0scripts\monitor_network.ps1"
 
 :: ══════════════════════════════════════════════════════════════════════════════

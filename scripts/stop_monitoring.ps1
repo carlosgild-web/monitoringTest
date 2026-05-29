@@ -14,6 +14,7 @@ $ErrorActionPreference = 'SilentlyContinue'
 # Scripts managed by start_monitoring.bat (name without extension)
 $MONITOR_SCRIPTS = @(
     'process_monitor',
+    'performance_monitor',
     'monitor_cpu',
     'monitor_memory',
     'monitor_disk',
