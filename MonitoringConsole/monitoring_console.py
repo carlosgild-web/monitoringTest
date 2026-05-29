@@ -15,6 +15,8 @@ BASE           = Path(__file__).parent.parent.resolve()
 SETTINGS_FILE  = BASE / "monitoring_settings.json"
 STATE_FILE     = BASE / "logs" / "process_state.json"
 PERF_STATE_FILE = BASE / "logs" / "performance_state.json"
+DISK_STATE_FILE = BASE / "logs" / "disk_state.json"
+NET_STATE_FILE  = BASE / "logs" / "network_state.json"
 PORT          = 5758
 
 
@@ -92,7 +94,18 @@ def get_status():
         perf_state = json.loads(PERF_STATE_FILE.read_text(encoding="utf-8-sig"))
     except Exception:
         pass
-    performance = perf_state.get("metrics", [])
+
+    disk_state = {}
+    try:
+        disk_state = json.loads(DISK_STATE_FILE.read_text(encoding="utf-8-sig"))
+    except Exception:
+        pass
+
+    net_state = {}
+    try:
+        net_state = json.loads(NET_STATE_FILE.read_text(encoding="utf-8-sig"))
+    except Exception:
+        pass
 
     return {
         "engine":        {"ok": engine_ok, "updated": updated_str,
@@ -100,7 +113,9 @@ def get_status():
         "processes":     processes,
         "total":         len(processes),
         "running_count": running_count,
-        "performance":   performance,
+        "performance":   perf_state.get("metrics", []),
+        "disks":         disk_state.get("drives", []),
+        "network":       net_state.get("hosts", []),
         "server_time":   datetime.now().strftime("%H:%M:%S"),
         "version":       cfg.get("_meta", {}).get("version", "?"),
     }
@@ -263,6 +278,12 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
   <div class="section-label" style="margin-top:20px">Performance</div>
   <div id="perf-list"><div class="empty">Loading…</div></div>
+
+  <div class="section-label" style="margin-top:20px">Disk</div>
+  <div id="disk-list"><div class="empty">Loading…</div></div>
+
+  <div class="section-label" style="margin-top:20px">Network</div>
+  <div id="net-list"><div class="empty">Loading…</div></div>
 </div>
 
 <div class="footer">
@@ -424,6 +445,66 @@ function render(d){
         <div class="meter-bar"><div class="meter-fill ${fc}" style="width:${pct}%"></div></div>
       </div>
     </div>
+    <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
+  </div>
+</div>`;
+    }).join('');
+  }
+
+  // disk rows
+  const dl = document.getElementById('disk-list');
+  if(!d.disks || !d.disks.length){
+    dl.innerHTML='<div class="empty">No data — is monitor_disk.ps1 running?</div>';
+  } else {
+    dl.innerHTML = d.disks.map(m => {
+      const lvl = (m.current_level||'ok').toLowerCase();
+      const ac  = lvl==='critical'?'ac-red':lvl==='warning'?'ac-orange':lvl==='unknown'?'ac-gray':'ac-green';
+      const fc  = lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
+      const lc  = lvl==='critical'?'lvl-crit':lvl==='warning'?'lvl-warn':'lvl-ok';
+      const val = m.percent_used!=null ? Math.round(m.percent_used) : null;
+      const pct = m.percent_used!=null ? Math.min(100, Math.round(m.percent_used)) : 0;
+      const sub = m.free_gb!=null ? `${esc(m.drive)}&nbsp;·&nbsp;${m.free_gb} GB free&nbsp;·&nbsp;Last check: ${esc(m.last_check||'—')}` : `${esc(m.drive)}&nbsp;·&nbsp;Unavailable`;
+      return `<div class="perf-row fade-in">
+  <div class="row-accent ${ac}"></div>
+  <div class="row-body">
+    <div class="proc-name-col">
+      <div class="proc-name">${esc(m.display_name)}</div>
+      <div class="proc-exe">${sub}</div>
+    </div>
+    <div class="status-col">
+      <div class="meter-wrap">
+        <span style="font-size:20px;font-weight:700;color:#fff">${val!=null?val+'%':'—'}</span>
+        <div class="meter-bar"><div class="meter-fill ${fc}" style="width:${pct}%"></div></div>
+      </div>
+    </div>
+    <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
+  </div>
+</div>`;
+    }).join('');
+  }
+
+  // network rows
+  const nl = document.getElementById('net-list');
+  if(!d.network || !d.network.length){
+    nl.innerHTML='<div class="empty">No data — is monitor_network.ps1 running?</div>';
+  } else {
+    nl.innerHTML = d.network.map(m => {
+      const lvl  = (m.current_level||'ok').toLowerCase();
+      const ok   = m.reachable === true;
+      const ac   = lvl==='critical'?'ac-red':lvl==='warning'?'ac-orange':'ac-green';
+      const lc   = lvl==='critical'?'lvl-crit':lvl==='warning'?'lvl-warn':'lvl-ok';
+      const bc   = ok?'sbadge-green':'sbadge-red';
+      const st   = ok?'● ONLINE':'● OFFLINE';
+      const lat  = (ok && m.latency_ms!=null) ? `<span class="txt-muted" style="font-size:12px;margin-left:10px">${m.latency_ms} ms</span>` : '';
+      const sub  = `${esc(m.host)}${m.port?':'+m.port:''}&nbsp;·&nbsp;${esc((m.protocol||'').toUpperCase())}&nbsp;·&nbsp;Last check: ${esc(m.last_check||'—')}`;
+      return `<div class="perf-row fade-in">
+  <div class="row-accent ${ac}"></div>
+  <div class="row-body">
+    <div class="proc-name-col">
+      <div class="proc-name">${esc(m.name)}</div>
+      <div class="proc-exe">${sub}</div>
+    </div>
+    <div class="status-col"><div class="sbadge ${bc}">${st}${lat}</div></div>
     <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
   </div>
 </div>`;

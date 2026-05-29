@@ -64,7 +64,7 @@
         },
         {
           "level": "critical",
-          "percent": 30,
+          "percent": 95,
           "sustain_sec": 5,
           "description": "CPU at 30 % sustained for 5 s",
           "actions": [
@@ -98,7 +98,7 @@
       "thresholds": [
         {
           "level": "warning",
-          "percent": 80,
+          "percent": 90,
           "sustain_sec": 5,
           "description": "RAM at 80 % sustained for 5 s",
           "actions": [
@@ -111,7 +111,7 @@
         },
         {
           "level": "critical",
-          "percent": 85,
+          "percent": 98,
           "sustain_sec": 5,
           "description": "RAM at 85 % sustained for 5 s",
           "actions": [

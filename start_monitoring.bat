@@ -27,11 +27,11 @@ call :LaunchScript "Performance Monitor"  "%~dp0scripts\performance_monitor.ps1"
 :: 4. Memory Monitor     -- uncomment when scripts\monitor_memory.ps1 exists
 :: call :LaunchScript "Memory Monitor" "%~dp0scripts\monitor_memory.ps1"
 
-:: 5. Disk Monitor       -- uncomment when scripts\monitor_disk.ps1 exists
-:: call :LaunchScript "Disk Monitor"   "%~dp0scripts\monitor_disk.ps1"
+:: 5. Disk Monitor
+call :LaunchScript "Disk Monitor"    "%~dp0scripts\monitor_disk.ps1"
 
-:: 6. Network Monitor    -- uncomment when scripts\monitor_network.ps1 exists
-:: call :LaunchScript "Network Monitor" "%~dp0scripts\monitor_network.ps1"
+:: 6. Network Monitor
+call :LaunchScript "Network Monitor" "%~dp0scripts\monitor_network.ps1"
 
 :: ══════════════════════════════════════════════════════════════════════════════
 
