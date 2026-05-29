@@ -1,0 +1,324 @@
+{
+  "_meta": {
+    "version": "1.1.0",
+    "last_updated": "2026-05-28",
+    "description": "Server monitoring configuration — defines what to watch, thresholds, and automated actions.",
+    "update_notes": "Bump version and update last_updated whenever you change this file."
+  },
+  "global": {
+    "check_interval_sec": 5,
+    "log_file": "C:\\MyData\\ClaudeProjects\\FolderContentMonitoring_PerformActions\\logs\\monitor.log",
+    "log_max_size_mb": 50,
+    "email_recipient": "carlosgild@gmail.com",
+    "email_sender": "monitor@yourserver.local",
+    "scripts_dir": "C:\\MyData\\ClaudeProjects\\FolderContentMonitoring_PerformActions\\scripts"
+  },
+  "processes": [
+    {
+      "name": "Obsidian.exe",
+      "display_name": "Obsidian",
+      "required": true,
+      "check_interval_sec": 30,
+      "actions": {
+        "on_not_running": [
+          {
+            "type": "log_to_file",
+            "level": "warning",
+            "instructions": "[{timestamp}] WARNING: Obsidian.exe not detected."
+          }
+        ]
+      }
+    },
+    {
+      "name": "notepad.exe",
+      "display_name": "Notepad.exe",
+      "required": true,
+      "check_interval_sec": 30,
+      "actions": {
+        "on_not_running": [
+          {
+            "type": "log_to_file",
+            "level": "warning",
+            "instructions": "Notepad is not running.\nContact Michel Rafael\n1-800-1593-1863\n\nValidate on MXOCC8956 server status. \nRun netstat -a ...."
+          }
+        ]
+      }
+    }
+  ],
+  "performance": {
+    "cpu": {
+      "check_interval_sec": 5,
+      "thresholds": [
+        {
+          "level": "warning",
+          "percent": 20,
+          "sustain_sec": 5,
+          "description": "CPU at 20 % sustained for 5 s",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "warning",
+              "message_template": "[{timestamp}] WARNING CPU: {current_value}% sustained {sustain_sec}s (threshold: {percent}%)"
+            }
+          ]
+        },
+        {
+          "level": "critical",
+          "percent": 30,
+          "sustain_sec": 5,
+          "description": "CPU at 30 % sustained for 5 s",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "critical",
+              "message_template": "[{timestamp}] CRITICAL CPU: {current_value}% sustained {sustain_sec}s (threshold: {percent}%)"
+            },
+            {
+              "type": "email_draft",
+              "to": "{global.email_recipient}",
+              "subject_template": "[CRITICAL] CPU Alert on {hostname} — {timestamp}",
+              "body_template": "Server: {hostname}\nTimestamp: {timestamp}\nMetric: CPU Usage\nCurrent Value: {current_value}%\nThreshold: {percent}%\nSustained for: {sustain_sec}s\n\nPlease investigate immediately."
+            },
+            {
+              "type": "run_script",
+              "path": "{global.scripts_dir}\\on_cpu_critical.ps1",
+              "args": [
+                "--level",
+                "critical",
+                "--value",
+                "{current_value}"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "memory": {
+      "check_interval_sec": 5,
+      "thresholds": [
+        {
+          "level": "warning",
+          "percent": 80,
+          "sustain_sec": 5,
+          "description": "RAM at 80 % sustained for 5 s",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "warning",
+              "message_template": "[{timestamp}] WARNING MEM: {current_value}% sustained {sustain_sec}s (threshold: {percent}%)"
+            }
+          ]
+        },
+        {
+          "level": "critical",
+          "percent": 85,
+          "sustain_sec": 5,
+          "description": "RAM at 85 % sustained for 5 s",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "critical",
+              "message_template": "[{timestamp}] CRITICAL MEM: {current_value}% sustained {sustain_sec}s (threshold: {percent}%)"
+            },
+            {
+              "type": "email_draft",
+              "to": "{global.email_recipient}",
+              "subject_template": "[CRITICAL] Memory Alert on {hostname} — {timestamp}",
+              "body_template": "Server: {hostname}\nTimestamp: {timestamp}\nMetric: Memory Usage\nCurrent Value: {current_value}%\nThreshold: {percent}%\nSustained for: {sustain_sec}s\n\nPlease investigate immediately."
+            },
+            {
+              "type": "run_script",
+              "path": "{global.scripts_dir}\\on_memory_critical.ps1",
+              "args": [
+                "--level",
+                "critical",
+                "--value",
+                "{current_value}"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "disk": [
+    {
+      "drive": "C:\\",
+      "display_name": "System Drive (C:)",
+      "check_interval_sec": 60,
+      "thresholds": [
+        {
+          "level": "warning",
+          "percent_used": 75,
+          "description": "Disk C: at 75% capacity",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "warning",
+              "message_template": "[{timestamp}] WARNING DISK C: {current_value}% used, {free_gb} GB free (threshold: {percent_used}%)"
+            }
+          ]
+        },
+        {
+          "level": "critical",
+          "percent_used": 90,
+          "description": "Disk C: at 90% capacity",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "critical",
+              "message_template": "[{timestamp}] CRITICAL DISK C: {current_value}% used, {free_gb} GB free (threshold: {percent_used}%)"
+            },
+            {
+              "type": "email_draft",
+              "to": "{global.email_recipient}",
+              "subject_template": "[CRITICAL] Disk Space Alert on {hostname} (C:) — {timestamp}",
+              "body_template": "Server: {hostname}\nTimestamp: {timestamp}\nDrive: C:\\\nUsed: {current_value}%\nFree Space: {free_gb} GB\nThreshold: {percent_used}%\n\nImmediate cleanup or expansion required."
+            },
+            {
+              "type": "run_script",
+              "path": "{global.scripts_dir}\\on_disk_critical.ps1",
+              "args": [
+                "--drive",
+                "C:",
+                "--value",
+                "{current_value}"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "drive": "D:\\",
+      "display_name": "Data Drive (D:)",
+      "check_interval_sec": 60,
+      "thresholds": [
+        {
+          "level": "warning",
+          "percent_used": 80,
+          "description": "Disk D: at 80% capacity",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "warning",
+              "message_template": "[{timestamp}] WARNING DISK D: {current_value}% used, {free_gb} GB free (threshold: {percent_used}%)"
+            }
+          ]
+        },
+        {
+          "level": "critical",
+          "percent_used": 92,
+          "description": "Disk D: at 92% capacity",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "critical",
+              "message_template": "[{timestamp}] CRITICAL DISK D: {current_value}% used, {free_gb} GB free (threshold: {percent_used}%)"
+            },
+            {
+              "type": "email_draft",
+              "to": "{global.email_recipient}",
+              "subject_template": "[CRITICAL] Disk Space Alert on {hostname} (D:) — {timestamp}",
+              "body_template": "Server: {hostname}\nTimestamp: {timestamp}\nDrive: D:\\\nUsed: {current_value}%\nFree Space: {free_gb} GB\nThreshold: {percent_used}%\n\nImmediate cleanup or expansion required."
+            },
+            {
+              "type": "run_script",
+              "path": "{global.scripts_dir}\\on_disk_critical.ps1",
+              "args": [
+                "--drive",
+                "D:",
+                "--value",
+                "{current_value}"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "network": [
+    {
+      "name": "Internet Gateway",
+      "host": "8.8.8.8",
+      "port": 53,
+      "protocol": "icmp",
+      "timeout_sec": 5,
+      "check_interval_sec": 30,
+      "thresholds": [
+        {
+          "level": "warning",
+          "latency_ms": 150,
+          "description": "Round-trip latency above 150 ms",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "warning",
+              "message_template": "[{timestamp}] WARNING NET: {host} latency {current_value}ms (threshold: {latency_ms}ms)"
+            }
+          ]
+        },
+        {
+          "level": "critical",
+          "condition": "unreachable",
+          "description": "Host is unreachable / no response",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "critical",
+              "message_template": "[{timestamp}] CRITICAL NET: {host} unreachable"
+            },
+            {
+              "type": "email_draft",
+              "to": "{global.email_recipient}",
+              "subject_template": "[CRITICAL] Network Outage on {hostname} — {timestamp}",
+              "body_template": "Server: {hostname}\nTimestamp: {timestamp}\nTarget: {host}:{port}\nStatus: UNREACHABLE\n\nPossible internet outage or gateway failure. Please investigate immediately."
+            },
+            {
+              "type": "run_script",
+              "path": "{global.scripts_dir}\\on_network_down.ps1",
+              "args": [
+                "--host",
+                "{host}"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Local Server Health Check",
+      "host": "localhost",
+      "port": 8080,
+      "protocol": "tcp",
+      "timeout_sec": 3,
+      "check_interval_sec": 15,
+      "thresholds": [
+        {
+          "level": "critical",
+          "condition": "unreachable",
+          "description": "Local service on port 8080 not responding",
+          "actions": [
+            {
+              "type": "log_to_file",
+              "level": "critical",
+              "message_template": "[{timestamp}] CRITICAL SVC: localhost:8080 unreachable"
+            },
+            {
+              "type": "run_script",
+              "path": "{global.scripts_dir}\\on_service_down.ps1",
+              "args": [
+                "--port",
+                "8080"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "others": {
+    "_comment": "Pending to define. Add new monitoring sections here following the same pattern: name, check_interval_sec, thresholds [ { level, condition/value, actions [] } ]",
+    "items": []
+  }
+}

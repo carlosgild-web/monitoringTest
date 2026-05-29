@@ -1,0 +1,15 @@
+# Runtime logs and state files
+logs/monitor.log
+logs/process_state.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude Code session files
+.claude/
+
+# Windows
+Thumbs.db
+desktop.ini
