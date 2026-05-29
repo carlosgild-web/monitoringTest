@@ -6,7 +6,7 @@
     "update_notes": "Bump version and update last_updated whenever you change this file."
   },
   "global": {
-    "check_interval_sec": 5,
+    "check_interval_sec": 6,
     "log_file": "C:\\MyData\\ClaudeProjects\\FolderContentMonitoring_PerformActions\\logs\\monitor.log",
     "log_max_size_mb": 50,
     "email_recipient": "carlosgild@gmail.com",
