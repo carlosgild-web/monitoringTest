@@ -275,8 +275,6 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div id="mon-perf" class="mon-item"><span class="mon-dot"></span><span>Performance</span></div>
   <div id="mon-disk" class="mon-item"><span class="mon-dot"></span><span>Disk</span></div>
   <div id="mon-net" class="mon-item"><span class="mon-dot"></span><span>Network</span></div>
-  <div class="bar-sep"></div>
-  <span class="clr-muted" style="font-size:12px" id="ehealth"></span>
 </div>
 
 <div class="alert-banner" id="alert-banner">
@@ -370,7 +368,7 @@ function render(d){
   document.getElementById('refresh-lbl').textContent = 'Refreshed '+d.server_time;
   document.getElementById('footer-lbl').textContent  = 'Last refresh: '+d.server_time;
 
-  const eng=d.engine, eh=document.getElementById('ehealth'), pd=document.getElementById('pdot');
+  const eng=d.engine, pd=document.getElementById('pdot');
   const mons=eng.monitors||{};
   const monIds={process:'mon-process',performance:'mon-perf',disk:'mon-disk',network:'mon-net'};
   Object.entries(monIds).forEach(([k,id])=>{
@@ -379,7 +377,6 @@ function render(d){
   });
   const anyActive=Object.values(mons).some(v=>v);
   pd.className=anyActive?'pulse-dot':'pulse-dot off';
-  eh.textContent=anyActive?'Updated '+fmtDur(eng.age_sec)+' ago':'';
 
   const inactive=Object.entries(mons).filter(([,v])=>!v).map(([k])=>k.charAt(0).toUpperCase()+k.slice(1));
   const banner=document.getElementById('alert-banner');
