@@ -195,6 +195,11 @@ def get_status():
         "performance":   perf_state.get("metrics", []),
         "disks":         disk_state.get("drives", []),
         "network":       net_state.get("hosts", []),
+        "config": {
+            "performance": cfg.get("performance", {}),
+            "disk":        cfg.get("disk", []),
+            "network":     cfg.get("network", []),
+        },
         "server_time":   datetime.now().strftime("%H:%M:%S"),
         "version":       cfg.get("_meta", {}).get("version", "?"),
     }
@@ -312,6 +317,20 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .fade-in{animation:fadeIn .2s ease}
+
+/* ── TOOLTIP ── */
+#tt-box{position:fixed;display:none;z-index:9999;pointer-events:none;background:#1e2d4a;color:#e2e8f0;border:1px solid #2d4a7a;border-radius:10px;padding:13px 16px;font-size:12px;min-width:280px;max-width:370px;box-shadow:0 10px 32px rgba(0,0,0,.35);line-height:1.6}
+.tt-title{font-weight:700;font-size:13px;color:#fff;margin-bottom:2px}
+.tt-meta{font-size:11px;color:#94a3b8;margin-bottom:6px}
+.tt-hr{height:1px;background:#2d4a7a;margin:8px 0}
+.tt-cur{font-size:11px;color:#94a3b8;margin-bottom:6px}
+.tt-cur b{color:#e2e8f0}
+.tt-thresh{margin-bottom:5px}
+.tt-lvl-warn{color:#fb923c;font-weight:700;font-size:11px}
+.tt-lvl-crit{color:#f87171;font-weight:700;font-size:11px}
+.tt-cond{color:#cbd5e1;font-size:11px;margin-left:6px}
+.tt-acts{font-size:11px;color:#64748b;padding-left:4px;margin-top:1px}
+.tt-instr{font-size:11px;color:#cbd5e1;white-space:pre-wrap;margin-top:4px;max-height:72px;overflow:hidden}
 </style>
 </head>
 <body>
@@ -391,6 +410,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   </div>
 </div>
 
+<div id="tt-box"></div>
+
 <script>
 const REFRESH = 10;
 const ACT_ICONS = {popup:'🔔', log_to_file:'📝', email_draft:'📧', run_script:'⚙️'};
@@ -413,6 +434,73 @@ function accColor(lvl){
   const l=(lvl||'ok').toLowerCase();
   return l==='critical'?'acc-red':l==='warning'?'acc-orange':l==='unknown'?'acc-gray':'acc-green';
 }
+
+// ── Tooltip ──────────────────────────────────────────────────────────────────
+const _ttBox = document.getElementById('tt-box');
+const _ttCache = {};
+
+document.addEventListener('mouseover', e => {
+  const row = e.target.closest('[data-ttid]');
+  if(!row || !_ttCache[row.dataset.ttid]){ _ttBox.style.display='none'; return; }
+  _ttBox.innerHTML = _ttCache[row.dataset.ttid];
+  _ttBox.style.display = 'block';
+  _posTt(e);
+});
+document.addEventListener('mousemove', e => {
+  if(_ttBox.style.display==='none') return;
+  if(!e.target.closest('[data-ttid]')){ _ttBox.style.display='none'; return; }
+  _posTt(e);
+});
+function _posTt(e){
+  const pad=16, w=_ttBox.offsetWidth, h=_ttBox.offsetHeight;
+  let x=e.clientX+pad, y=e.clientY+pad;
+  if(x+w>window.innerWidth-8)  x=e.clientX-w-pad;
+  if(y+h>window.innerHeight-8) y=e.clientY-h-pad;
+  _ttBox.style.left=x+'px'; _ttBox.style.top=y+'px';
+}
+
+function _ttThresh(thresholds, type){
+  return (thresholds||[]).map(t=>{
+    const cls = t.level==='critical'?'tt-lvl-crit':'tt-lvl-warn';
+    const icon = t.level==='critical'?'🔴':'⚠️';
+    let cond='';
+    if(type==='perf') cond=`≥ ${t.percent}%  sustained ${t.sustain_sec}s`;
+    else if(type==='disk') cond=`≥ ${t.percent_used}% used`;
+    else if(type==='net') cond = t.condition==='unreachable'?'Unreachable':t.latency_ms?`Latency &gt; ${t.latency_ms}ms`:'';
+    const acts=(t.actions||[]).map(a=>ACT_ICONS[a.type]||'•').join(' ');
+    return `<div class="tt-thresh"><span class="${cls}">${icon} ${t.level.toUpperCase()}</span><span class="tt-cond">${cond}</span><div class="tt-acts">${acts||'—'}</div></div>`;
+  }).join('');
+}
+function _ttPerf(m, cfg){
+  const cur=m.current_value!=null?`Current: <b>${Math.round(m.current_value)}%</b>`:'';
+  return `<div class="tt-title">${esc(m.display_name)}</div>`+
+    `<div class="tt-meta">Check every ${(cfg||{}).check_interval_sec||5}s</div>`+
+    (cur?`<div class="tt-cur">${cur}</div>`:'')+
+    `<div class="tt-hr"></div>`+_ttThresh((cfg||{}).thresholds,'perf');
+}
+function _ttDisk(m, cfg){
+  const cur=m.percent_used!=null?`Current: <b>${Math.round(m.percent_used)}%</b> &nbsp;·&nbsp; Free: <b>${m.free_gb} GB</b>`:'Drive unavailable';
+  return `<div class="tt-title">${esc(m.display_name)}</div>`+
+    `<div class="tt-meta">Drive: ${esc(m.drive)} &nbsp;·&nbsp; Check every ${(cfg||{}).check_interval_sec||60}s</div>`+
+    `<div class="tt-cur">${cur}</div>`+
+    `<div class="tt-hr"></div>`+_ttThresh((cfg||{}).thresholds,'disk');
+}
+function _ttNet(m, cfg){
+  const lat=m.latency_ms!=null?` &nbsp;·&nbsp; Latency: <b>${m.latency_ms}ms</b>`:'';
+  const cur=`Status: <b>${m.reachable?'Online':'Offline'}</b>${lat}`;
+  return `<div class="tt-title">${esc(m.name)}</div>`+
+    `<div class="tt-meta">Host: ${esc(m.host)}${m.port?':'+m.port:''} &nbsp;·&nbsp; ${esc((m.protocol||'').toUpperCase())} &nbsp;·&nbsp; Check every ${(cfg||{}).check_interval_sec||30}s &nbsp;·&nbsp; Timeout: ${(cfg||{}).timeout_sec||5}s</div>`+
+    `<div class="tt-cur">${cur}</div>`+
+    `<div class="tt-hr"></div>`+_ttThresh((cfg||{}).thresholds,'net');
+}
+function _ttProc(p){
+  const acts=(p.actions||[]).map(a=>ACT_ICONS[a]||'•').join(' ');
+  const instr=p.instructions?`<div class="tt-hr"></div><div class="tt-meta">Instructions:</div><div class="tt-instr">${esc(p.instructions.substring(0,220))}</div>`:'';
+  return `<div class="tt-title">${esc(p.display_name)}</div>`+
+    `<div class="tt-meta">Process: ${esc(p.name)} &nbsp;·&nbsp; ${p.required?'Required':'Optional'} &nbsp;·&nbsp; Check every ${p.check_sec}s</div>`+
+    `<div class="tt-hr"></div><div class="tt-meta">On not running: ${acts||'—'}</div>${instr}`;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function render(d){
   document.getElementById('ver').textContent         = 'v'+d.version;
@@ -443,16 +531,19 @@ function render(d){
     }
   });
 
+  const cfg = d.config || {};
+
   // processes
   const pl=document.getElementById('proc-list');
   if(!d.processes.length){ pl.innerHTML='<div class="empty-row">No processes configured.</div>'; }
-  else { pl.innerHTML = d.processes.map(p => {
+  else { pl.innerHTML = d.processes.map((p,i) => {
     const run=p.is_running===true, unk=p.is_running===null;
     const lvl=run?'ok':unk?'unknown':'critical';
     const sub=run?(p.last_check?'Last check: '+esc(p.last_check):''):
               p.down_since?'Down '+fmtDur(p.down_sec)+' &nbsp;·&nbsp; Alerts: '+p.alert_count:'Not detected';
     const btn=!run?`<button class="btn-warn" onclick='showModal(${JSON.stringify(p)})'>⚠ Info</button>`:'';
-    return `<div class="item-row fade-in">
+    const ttid=`proc-${i}`; _ttCache[ttid]=_ttProc(p);
+    return `<div class="item-row fade-in" data-ttid="${ttid}">
   <div class="item-accent ${accColor(lvl)}"></div>
   <div class="item-name"><div class="item-label">${esc(p.display_name)}</div><div class="item-sub">${esc(p.name)}&nbsp;·&nbsp;${p.required?'Required':'Optional'}&nbsp;·&nbsp;${sub}</div></div>
   <div class="item-badge">${run?'<span class="badge badge-green">RUNNING</span>':unk?'<span class="badge badge-gray">UNKNOWN</span>':'<span class="badge badge-red">NOT RUNNING</span>'}</div>
@@ -463,12 +554,14 @@ function render(d){
   // performance
   const pfl=document.getElementById('perf-list');
   if(!d.performance||!d.performance.length){ pfl.innerHTML='<div class="empty-row">Start performance_monitor.ps1</div>'; }
-  else { pfl.innerHTML = d.performance.map(m => {
+  else { pfl.innerHTML = d.performance.map((m,i) => {
     const lvl=(m.current_level||'ok').toLowerCase();
     const val=m.current_value!=null?Math.round(m.current_value):null;
     const pct=m.current_value!=null?Math.min(100,Math.round(m.current_value)):0;
     const fc=lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
-    return `<div class="item-row fade-in">
+    const perfCfg=(cfg.performance||{})[m.name]||{};
+    const ttid=`perf-${i}`; _ttCache[ttid]=_ttPerf(m,perfCfg);
+    return `<div class="item-row fade-in" data-ttid="${ttid}">
   <div class="item-accent ${accColor(lvl)}"></div>
   <div class="item-name"><div class="item-label">${esc(m.display_name)}</div><div class="item-sub">Last check: ${esc(m.last_check||'—')}</div></div>
   <div class="item-metric"><div class="metric-val">${val!=null?val+'%':'—'}</div><div class="metric-bar"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div></div>
@@ -479,13 +572,15 @@ function render(d){
   // disk
   const dkl=document.getElementById('disk-list');
   if(!d.disks||!d.disks.length){ dkl.innerHTML='<div class="empty-row">Start monitor_disk.ps1</div>'; }
-  else { dkl.innerHTML = d.disks.map(m => {
+  else { dkl.innerHTML = d.disks.map((m,i) => {
     const lvl=(m.current_level||'ok').toLowerCase();
     const val=m.percent_used!=null?Math.round(m.percent_used):null;
     const pct=m.percent_used!=null?Math.min(100,Math.round(m.percent_used)):0;
     const fc=lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
     const sub=m.free_gb!=null?`${esc(m.drive)}&nbsp;·&nbsp;${m.free_gb} GB free`:`${esc(m.drive)}&nbsp;·&nbsp;Unavailable`;
-    return `<div class="item-row fade-in">
+    const diskCfg=(cfg.disk||[]).find(dc=>dc.drive===m.drive)||{};
+    const ttid=`disk-${i}`; _ttCache[ttid]=_ttDisk(m,diskCfg);
+    return `<div class="item-row fade-in" data-ttid="${ttid}">
   <div class="item-accent ${accColor(lvl)}"></div>
   <div class="item-name"><div class="item-label">${esc(m.display_name)}</div><div class="item-sub">${sub}</div></div>
   <div class="item-metric">${val!=null?`<div class="metric-val">${val}%</div><div class="metric-bar"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div>`:'<div class="metric-val clr-muted">—</div>'}</div>
@@ -496,11 +591,13 @@ function render(d){
   // network
   const ntl=document.getElementById('net-list');
   if(!d.network||!d.network.length){ ntl.innerHTML='<div class="empty-row">Start monitor_network.ps1</div>'; }
-  else { ntl.innerHTML = d.network.map(m => {
+  else { ntl.innerHTML = d.network.map((m,i) => {
     const lvl=(m.current_level||'ok').toLowerCase(), ok=m.reachable===true;
     const lat=(ok&&m.latency_ms!=null)?`${m.latency_ms} ms`:'';
     const sub=`${esc(m.host)}${m.port?':'+m.port:''}&nbsp;·&nbsp;${esc((m.protocol||'').toUpperCase())}${lat?'&nbsp;·&nbsp;'+lat:''}`;
-    return `<div class="item-row fade-in">
+    const netCfg=(cfg.network||[]).find(nc=>nc.name===m.name)||{};
+    const ttid=`net-${i}`; _ttCache[ttid]=_ttNet(m,netCfg);
+    return `<div class="item-row fade-in" data-ttid="${ttid}">
   <div class="item-accent ${accColor(lvl)}"></div>
   <div class="item-name"><div class="item-label">${esc(m.name)}</div><div class="item-sub">${sub}</div></div>
   <div class="item-badge">${ok?'<span class="badge badge-green">ONLINE</span>':'<span class="badge badge-red">OFFLINE</span>'}</div>
