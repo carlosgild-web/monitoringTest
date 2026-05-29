@@ -10,6 +10,7 @@ import webbrowser
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
+from socketserver import ThreadingMixIn
 
 BASE           = Path(__file__).parent.parent.resolve()
 SETTINGS_FILE  = BASE / "monitoring_settings.json"
@@ -18,6 +19,61 @@ PERF_STATE_FILE = BASE / "logs" / "performance_state.json"
 DISK_STATE_FILE = BASE / "logs" / "disk_state.json"
 NET_STATE_FILE  = BASE / "logs" / "network_state.json"
 PORT          = 5758
+
+MONITOR_SCRIPTS = {
+    "process":     BASE / "scripts" / "process_monitor.ps1",
+    "performance": BASE / "scripts" / "performance_monitor.ps1",
+    "disk":        BASE / "scripts" / "monitor_disk.ps1",
+    "network":     BASE / "scripts" / "monitor_network.ps1",
+}
+
+
+def _log_action(message: str):
+    try:
+        cfg = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+        log_file = cfg.get("global", {}).get("log_file", "")
+        if log_file:
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(message + "\n")
+    except Exception:
+        pass
+
+
+def stop_monitor(key: str) -> dict:
+    path = MONITOR_SCRIPTS.get(key)
+    if not path:
+        return {"ok": False, "error": "unknown monitor"}
+    stem = path.stem
+    cmd = (
+        f"Get-CimInstance Win32_Process | Where-Object {{"
+        f" ($_.Name -eq 'powershell.exe' -or $_.Name -eq 'pwsh.exe') -and"
+        f" $_.CommandLine -like '*{stem}*' }}"
+        f" | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }}"
+    )
+    # Fire-and-forget: don't block the server waiting for PS to finish
+    subprocess.Popen(
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd],
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _log_action(f"[{ts}] ACTION: {key} monitor ({stem}.ps1) STOPPED by user via console.")
+    return {"ok": True}
+
+
+def start_monitor(key: str) -> dict:
+    path = MONITOR_SCRIPTS.get(key)
+    if not path:
+        return {"ok": False, "error": "unknown monitor"}
+    if not path.exists():
+        return {"ok": False, "error": f"script not found: {path}"}
+    subprocess.Popen(
+        ["powershell", "-ExecutionPolicy", "Bypass", "-NoProfile",
+         "-WindowStyle", "Hidden", "-File", str(path)],
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _log_action(f"[{ts}] ACTION: {key} monitor ({path.stem}.ps1) STARTED by user via console.")
+    return {"ok": True}
 
 
 def _parse_dt(s):
@@ -183,13 +239,6 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .mon-active .mon-dot{background:var(--green)}
 .mon-active{color:var(--green)}
 
-/* ── ALERT BANNER ── */
-.alert-banner{background:#fff8e1;border-bottom:2px solid #f59e0b;padding:7px 18px;display:none;align-items:center;gap:8px;flex-shrink:0;font-size:12px;color:#92400e;font-weight:500}
-.alert-banner.visible{display:flex}
-.alert-icon{font-size:15px;flex-shrink:0}
-.alert-name{font-weight:700;color:#78350f}
-.alert-link{font-family:monospace;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:1px 6px;font-size:11px;color:#92400e}
-
 /* ── MAIN GRID ── */
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px;flex:1;min-height:0;overflow:hidden}
 .col{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
@@ -222,11 +271,18 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .btn-warn:hover{background:var(--red-bd)}
 .empty-row{padding:18px 13px;text-align:center;color:var(--muted);font-size:12px}
 /* ── SECTION COLORS ── */
-.sec-head{background:var(--bg3)}
-.sec-processes .sec-head{background:#EFF6FF;border-bottom-color:#BFDBFE}.sec-processes .sec-title{color:#1E40AF}.sec-processes .sec-body{background:#FAFCFF}
-.sec-perf .sec-head{background:#F5F3FF;border-bottom-color:#C4B5FD}.sec-perf .sec-title{color:#5B21B6}.sec-perf .sec-body{background:#FDFBFF}
-.sec-disk .sec-head{background:#ECFDF5;border-bottom-color:#A7F3D0}.sec-disk .sec-title{color:#065F46}.sec-disk .sec-body{background:#FAFFFE}
-.sec-net .sec-head{background:#FFF7ED;border-bottom-color:#FED7AA}.sec-net .sec-title{color:#9A3412}.sec-net .sec-body{background:#FFFDF8}
+.sec-head{background:var(--bg3);display:flex;align-items:center;justify-content:space-between}
+.sec-processes .sec-head{background:#EFF6FF;border-bottom-color:#BFDBFE}.sec-processes .sec-title{color:#1E40AF}
+.sec-perf      .sec-head{background:#F5F3FF;border-bottom-color:#C4B5FD}.sec-perf .sec-title{color:#5B21B6}
+.sec-disk      .sec-head{background:#ECFDF5;border-bottom-color:#A7F3D0}.sec-disk .sec-title{color:#065F46}
+.sec-net       .sec-head{background:#FFF7ED;border-bottom-color:#FED7AA}.sec-net  .sec-title{color:#9A3412}
+.sec-head.danger{background:#fef2f2 !important;border-bottom-color:#fca5a5 !important}
+.sec-head.danger .sec-title{color:#991b1b !important}
+.sec-body{background:#ffffff}
+.btn-stop{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-stop:hover{background:var(--red-bd)}
+.btn-start{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-start:hover{background:var(--green-bd)}
 
 /* ── FOOTER ── */
 .footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);flex-shrink:0}
@@ -277,31 +333,24 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div id="mon-net" class="mon-item"><span class="mon-dot"></span><span>Network</span></div>
 </div>
 
-<div class="alert-banner" id="alert-banner">
-  <span class="alert-icon">⚠️</span>
-  <span>Monitor scripts not running: <span class="alert-name" id="alert-names"></span></span>
-  <span style="color:#b45309">—</span>
-  <span>Run <span class="alert-link">start_monitoring.bat</span> to activate.</span>
-</div>
-
 <div class="main-grid">
   <div class="col">
     <div class="section sec-processes">
-      <div class="sec-head"><span class="sec-title">Processes</span></div>
+      <div class="sec-head" id="head-process"><span class="sec-title">Processes</span><span id="ctrl-process"></span></div>
       <div class="sec-body" id="proc-list"><div class="empty-row">Loading…</div></div>
     </div>
     <div class="section sec-disk">
-      <div class="sec-head"><span class="sec-title">Disk</span></div>
+      <div class="sec-head" id="head-disk"><span class="sec-title">Disk</span><span id="ctrl-disk"></span></div>
       <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
     </div>
   </div>
   <div class="col">
     <div class="section sec-perf">
-      <div class="sec-head"><span class="sec-title">Performance</span></div>
+      <div class="sec-head" id="head-performance"><span class="sec-title">Performance</span><span id="ctrl-performance"></span></div>
       <div class="sec-body" id="perf-list"><div class="empty-row">Loading…</div></div>
     </div>
     <div class="section sec-net">
-      <div class="sec-head"><span class="sec-title">Network</span></div>
+      <div class="sec-head" id="head-network"><span class="sec-title">Network</span><span id="ctrl-network"></span></div>
       <div class="sec-body" id="net-list"><div class="empty-row">Loading…</div></div>
     </div>
   </div>
@@ -378,10 +427,19 @@ function render(d){
   const anyActive=Object.values(mons).some(v=>v);
   pd.className=anyActive?'pulse-dot':'pulse-dot off';
 
-  const inactive=Object.entries(mons).filter(([,v])=>!v).map(([k])=>k.charAt(0).toUpperCase()+k.slice(1));
-  const banner=document.getElementById('alert-banner');
-  document.getElementById('alert-names').textContent=inactive.join(', ');
-  banner.classList.toggle('visible', inactive.length>0);
+  // per-section header color + start/stop button
+  Object.entries(mons).forEach(([key, active])=>{
+    const head=document.getElementById('head-'+key);
+    const ctrl=document.getElementById('ctrl-'+key);
+    if(!head||!ctrl) return;
+    if(active){
+      head.classList.remove('danger');
+      ctrl.innerHTML=`<button class="btn-stop" onclick="ctrlMonitor('stop','${key}')">Stop Monitoring</button>`;
+    } else {
+      head.classList.add('danger');
+      ctrl.innerHTML=`<button class="btn-start" onclick="ctrlMonitor('start','${key}')">Start Monitoring</button>`;
+    }
+  });
 
   // processes
   const pl=document.getElementById('proc-list');
@@ -466,6 +524,27 @@ function showModal(p){
 function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 
+async function ctrlMonitor(action, key){
+  const label = key.charAt(0).toUpperCase()+key.slice(1);
+  const verb  = action==='stop' ? 'STOP' : 'START';
+  const msg   = action==='stop'
+    ? `Stop the ${label} monitor?\n\nThis will terminate the background script. You can restart it from this console.`
+    : `Start the ${label} monitor?\n\nThis will launch the background script.`;
+  if(!confirm(msg)) return;
+  try{
+    const r = await fetch(`/api/${action}/${key}`, {method:'POST'});
+    const d = await r.json();
+    if(d.ok){
+      alert(`${verb} command sent for ${label} monitor.`);
+      fetchStatus();
+    } else {
+      alert(`Could not ${action} ${label} monitor:\n${d.error||'Unknown error'}`);
+    }
+  } catch(e){
+    alert(`Request failed: ${e.message}`);
+  }
+}
+
 async function fetchStatus(){
   try{
     const r=await fetch('/api/status');
@@ -501,6 +580,22 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_POST(self):
+        parts = self.path.strip("/").split("/")
+        if len(parts) == 3 and parts[0] == "api" and parts[1] in ("stop", "start"):
+            action, key = parts[1], parts[2]
+            result = stop_monitor(key) if action == "stop" else start_monitor(key)
+            body = json.dumps(result, ensure_ascii=False).encode("utf-8")
+            self._send(body, "application/json")
+        else:
+            self.send_error(404)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.end_headers()
+
     def _send(self, body: bytes, ctype: str):
         self.send_response(200)
         self.send_header("Content-Type", ctype)
@@ -511,12 +606,15 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
+class ThreadedServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
 if __name__ == "__main__":
     url = f"http://localhost:{PORT}"
-    print(f"\n  Process Monitoring Console  —  Web Interface")
+    print(f"\n  Monitoring Console  —  Web Interface")
     print(f"  Dashboard : {url}")
     print(f"  Settings  : {SETTINGS_FILE}")
-    print(f"  State     : {STATE_FILE}")
     print("  Stop      : Ctrl+C\n")
     webbrowser.open(url)
-    HTTPServer(("localhost", PORT), Handler).serve_forever()
+    ThreadedServer(("localhost", PORT), Handler).serve_forever()
