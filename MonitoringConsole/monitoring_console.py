@@ -59,7 +59,7 @@ def get_status():
     except Exception:
         pass
     try:
-        state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        state = json.loads(STATE_FILE.read_text(encoding="utf-8-sig"))
     except Exception:
         pass
 
