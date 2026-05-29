@@ -276,8 +276,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .sec-perf      .sec-head{background:#F5F3FF;border-bottom-color:#C4B5FD}.sec-perf .sec-title{color:#5B21B6}
 .sec-disk      .sec-head{background:#ECFDF5;border-bottom-color:#A7F3D0}.sec-disk .sec-title{color:#065F46}
 .sec-net       .sec-head{background:#FFF7ED;border-bottom-color:#FED7AA}.sec-net  .sec-title{color:#9A3412}
-.sec-head.danger{background:#fef2f2 !important;border-bottom-color:#fca5a5 !important}
-.sec-head.danger .sec-title{color:#991b1b !important}
+.sec-head.danger{background:#dc2626 !important;border-bottom-color:#991b1b !important}
+.sec-head.danger .sec-title{color:#ffffff !important}
+.sec-head.danger .btn-start{background:#ffffff;color:#dc2626;border-color:#ffffff}
+.sec-head.danger .btn-start:hover{background:#fee2e2}
 .sec-body{background:#ffffff}
 .btn-stop{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn-stop:hover{background:var(--red-bd)}
