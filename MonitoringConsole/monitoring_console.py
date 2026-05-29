@@ -126,116 +126,96 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Process Monitoring Console</title>
+<title>Monitoring Console</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d1a30;--bg2:#111f38;--bg3:#162543;--card:#162543;
-  --border:#243758;--text:#cdddf5;--muted:#607898;
-  --cyan:#2dd4dc;--green:#22d45a;--green-dim:#155f2b;
-  --red:#f04040;--red-dim:#6b1c1c;--orange:#ff9940;--yellow:#f4c435;
+  --bg:#f0f4f9;--bg2:#ffffff;--bg3:#e8edf7;--card:#ffffff;
+  --border:#d0d9eb;--text:#1a2740;--muted:#5e7191;
+  --green:#15803d;--green-bg:#f0fdf4;--green-bd:#86efac;
+  --red:#b91c1c;--red-bg:#fef2f2;--red-bd:#fca5a5;
+  --orange:#c2410c;--orange-bg:#fff7ed;--orange-bd:#fed7aa;
+  --accent:#2563eb;
 }
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── TOP BAR ── */
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-.topbar-left{display:flex;align-items:center;gap:14px}
-.app-icon{width:34px;height:34px;background:linear-gradient(135deg,#1a7fbf,var(--cyan));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.app-title{font-size:17px;font-weight:700;color:#fff;letter-spacing:.2px}
-.app-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.topbar-right{display:flex;align-items:center;gap:10px}
-.version-badge{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 11px;font-size:11px;color:var(--muted)}
-.refresh-indicator{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
-.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2.5s ease-in-out infinite;flex-shrink:0}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;height:46px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:9px}
+.app-icon{width:26px;height:26px;background:linear-gradient(135deg,#2563eb,#0891b2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.app-title{font-size:14px;font-weight:700;color:var(--text)}
+.version-badge{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--muted)}
+.topbar-right{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2.5s ease-in-out infinite;flex-shrink:0}
 .pulse-dot.off{background:var(--muted);animation:none}
 
-/* ── ENGINE BAR ── */
-.engine-bar{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.engine-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
-.engine-status{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;white-space:nowrap}
-.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.sdot-green{background:var(--green);box-shadow:0 0 7px rgba(34,212,90,.55)}
-.sdot-red{background:var(--red);box-shadow:0 0 7px rgba(240,64,64,.55)}
-.sdot-gray{background:var(--muted)}
-.engine-health{font-size:12px}
-.clr-green{color:var(--green)}
-.clr-orange{color:var(--orange)}
-.clr-muted{color:var(--muted)}
+/* ── STATUS BAR ── */
+.status-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;height:36px;display:flex;align-items:center;gap:14px;flex-shrink:0;font-size:12px}
+.eng-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.eng-dot-green{background:var(--green)}.eng-dot-red{background:var(--red)}.eng-dot-gray{background:#94a3b8}
+.eng-txt{font-weight:600}.bar-sep{width:1px;height:16px;background:var(--border)}
+.clr-green{color:var(--green)}.clr-red{color:var(--red)}.clr-muted{color:var(--muted)}
+.stat-pill{display:flex;align-items:center;gap:4px}
+.stat-num{font-weight:700;font-size:13px}
 
-/* ── STATS ── */
-.stats-row{padding:14px 28px;display:flex;gap:8px;flex-wrap:wrap}
-.stat-pill{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
-.stat-pill .num{font-weight:700;font-size:13px}
-.stat-pill.s-run{border-color:var(--green-dim)}.stat-pill.s-run .num{color:var(--green)}
-.stat-pill.s-dwn{border-color:var(--red-dim)}.stat-pill.s-dwn .num{color:var(--red)}
+/* ── MAIN GRID ── */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px;flex:1;min-height:0;overflow:hidden}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+.section{background:var(--card);border:1px solid var(--border);border-radius:9px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sec-head{padding:7px 13px 6px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sec-title{font-size:9px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted)}
+.sec-body{overflow:auto;flex:1}
 
-/* ── MAIN ── */
-.main{padding:0 28px 80px}
-.section-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px}
-.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
-
-/* ── PROCESS ROW ── */
-.proc-row{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;display:flex;align-items:stretch;overflow:hidden;transition:border-color .2s,box-shadow .2s}
-.proc-row:hover{border-color:#3a5590;box-shadow:0 2px 16px rgba(0,0,0,.25)}
-.row-accent{width:5px;flex-shrink:0}
-.ac-green{background:#188c38}.ac-red{background:#8c1c1c}.ac-gray{background:var(--muted)}
-.row-body{flex:1;padding:16px 22px;display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap}
-.proc-name-col{min-width:160px;flex-shrink:0}
-.proc-name{font-size:16px;font-weight:700;color:#fff}
-.proc-exe{font-size:11px;color:var(--muted);margin-top:3px}
-.status-col{min-width:145px;flex-shrink:0}
-.sbadge{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700}
-.sbadge-green{color:var(--green)}.sbadge-red{color:var(--red)}.sbadge-gray{color:var(--muted)}
-.info-col{flex:1;min-width:160px}
-.txt-orange{font-size:12px;color:var(--orange)}
-.txt-muted{font-size:12px;color:var(--muted)}
-.txt-alert{font-size:11px;color:var(--muted);margin-top:2px}
-.tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
-.tag{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
-.actions-col{flex-shrink:0}
-.btn-instr{background:var(--red);color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:background .15s,transform .1s;white-space:nowrap}
-.btn-instr:hover{background:#c82020;transform:scale(1.03)}
-.empty{text-align:center;padding:56px;color:var(--muted)}
-
-/* ── MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(3px)}
-.overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:30px 32px;max-width:490px;width:calc(100% - 32px);box-shadow:0 24px 64px rgba(0,0,0,.55);animation:slideUp .22s ease}
-.modal-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:22px}
-.modal-icon-wrap{width:44px;height:44px;border-radius:10px;background:var(--red-dim);border:1px solid #a02020;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.modal-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:3px}
-.modal-exe{font-size:12px;color:var(--muted)}
-.mrow{margin-bottom:18px}
-.mrow-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.mrow-val{font-size:13px;color:var(--text)}
-.mrow-val.red{color:var(--red)}.mrow-val.orange{color:var(--orange)}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 13px;font-size:12px;color:var(--text)}
-.modal-note{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:13px 16px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:22px;white-space:pre-line}
-.btn-close{width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
-.btn-close:hover{background:var(--border)}
+/* ── ITEM ROW ── */
+.item-row{display:flex;align-items:center;gap:9px;padding:6px 13px;border-bottom:1px solid var(--border);transition:background .12s;min-height:44px}
+.item-row:last-child{border-bottom:none}
+.item-row:hover{background:var(--bg)}
+.item-accent{width:3px;height:24px;border-radius:2px;flex-shrink:0}
+.acc-green{background:var(--green)}.acc-red{background:var(--red)}.acc-orange{background:var(--orange)}.acc-gray{background:#94a3b8}
+.item-name{flex:1;min-width:0}
+.item-label{font-weight:600;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-metric{flex-shrink:0;text-align:right;min-width:72px}
+.metric-val{font-size:14px;font-weight:700;color:var(--text)}
+.metric-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:3px;width:72px}
+.metric-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.fill-ok{background:var(--green)}.fill-warn{background:var(--orange)}.fill-crit{background:var(--red)}
+.item-badge{flex-shrink:0;min-width:70px;text-align:right}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.badge-orange{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-bd)}
+.badge-gray{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.btn-warn{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:4px}
+.btn-warn:hover{background:var(--red-bd)}
+.empty-row{padding:18px 13px;text-align:center;color:var(--muted);font-size:11px}
 
 /* ── FOOTER ── */
-.footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:9px 28px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);z-index:10}
-.cdbar-wrap{display:flex;align-items:center;gap:8px}
-.cdbar{width:72px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
-.cdbar-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width 1s linear}
+.footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);flex-shrink:0}
+.cdbar-wrap{display:flex;align-items:center;gap:6px}
+.cdbar{width:56px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.cdbar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 1s linear}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(3px)}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:22px 24px;max-width:420px;width:calc(100% - 32px);box-shadow:0 12px 40px rgba(0,0,0,.14);animation:slideUp .2s ease}
+.modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.modal-sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+.mrow{margin-bottom:12px}
+.mrow-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.mrow-val{font-size:12px;color:var(--text)}.mrow-val.red{color:var(--red)}.mrow-val.orange{color:var(--orange)}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px;color:var(--text)}
+.modal-note{background:var(--orange-bg);border:1px solid var(--orange-bd);border-left:3px solid var(--orange);border-radius:7px;padding:10px 13px;font-size:12px;color:var(--text);line-height:1.6;margin-bottom:16px;white-space:pre-line}
+.btn-close{width:100%;padding:9px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
+.btn-close:hover{background:var(--border)}
 
 /* ── ANIMATIONS ── */
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.fade-in{animation:fadeIn .25s ease}
-
-/* ── PERFORMANCE ROW ── */
-.ac-orange{background:#8c5a00}
-.perf-row{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;display:flex;align-items:stretch;overflow:hidden;transition:border-color .2s,box-shadow .2s}
-.perf-row:hover{border-color:#3a5590;box-shadow:0 2px 16px rgba(0,0,0,.25)}
-.meter-wrap{flex:1;min-width:140px}
-.meter-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:7px}
-.meter-fill{height:100%;border-radius:3px;transition:width .5s ease}
-.fill-ok{background:var(--green)}.fill-warn{background:var(--orange)}.fill-crit{background:var(--red)}
-.lvl-ok{color:var(--green);font-weight:700;font-size:13px}.lvl-warn{color:var(--orange);font-weight:700;font-size:13px}.lvl-crit{color:var(--red);font-weight:700;font-size:13px}
+.fade-in{animation:fadeIn .2s ease}
 </style>
 </head>
 <body>
@@ -243,47 +223,46 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 <div class="topbar">
   <div class="topbar-left">
     <div class="app-icon">📊</div>
-    <div>
-      <div class="app-title">Process Monitoring Console</div>
-      <div class="app-sub">Live process status &amp; health dashboard</div>
-    </div>
+    <div class="app-title">Monitoring Console</div>
+    <span class="version-badge" id="ver">v—</span>
   </div>
   <div class="topbar-right">
-    <span class="version-badge" id="ver">v—</span>
-    <div class="refresh-indicator">
-      <span class="pulse-dot" id="pdot"></span>
-      <span id="refresh-lbl">Connecting…</span>
+    <div class="pulse-dot" id="pdot"></div>
+    <span id="refresh-lbl">Connecting…</span>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="eng-dot eng-dot-gray" id="edot"></div>
+  <span class="eng-txt clr-muted" id="etxt">Connecting…</span>
+  <span class="clr-muted" id="ehealth"></span>
+  <div class="bar-sep"></div>
+  <div class="stat-pill"><span class="stat-num" id="s-total">—</span>&nbsp;<span class="clr-muted">Monitored</span></div>
+  <div class="stat-pill"><span class="stat-num clr-green" id="s-run">—</span>&nbsp;<span class="clr-muted">Running</span></div>
+  <div class="stat-pill"><span class="stat-num clr-red" id="s-dwn">—</span>&nbsp;<span class="clr-muted">Not Running</span></div>
+</div>
+
+<div class="main-grid">
+  <div class="col">
+    <div class="section">
+      <div class="sec-head"><span class="sec-title">Processes</span></div>
+      <div class="sec-body" id="proc-list"><div class="empty-row">Loading…</div></div>
+    </div>
+    <div class="section">
+      <div class="sec-head"><span class="sec-title">Disk</span></div>
+      <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
     </div>
   </div>
-</div>
-
-<div class="engine-bar">
-  <span class="engine-label">Monitoring Engine</span>
-  <div class="engine-status">
-    <span class="sdot sdot-gray" id="edot"></span>
-    <span id="etxt" style="color:var(--muted)">Connecting…</span>
+  <div class="col">
+    <div class="section">
+      <div class="sec-head"><span class="sec-title">Performance</span></div>
+      <div class="sec-body" id="perf-list"><div class="empty-row">Loading…</div></div>
+    </div>
+    <div class="section">
+      <div class="sec-head"><span class="sec-title">Network</span></div>
+      <div class="sec-body" id="net-list"><div class="empty-row">Loading…</div></div>
+    </div>
   </div>
-  <span class="engine-health" id="ehealth"></span>
-</div>
-
-<div class="stats-row">
-  <div class="stat-pill"><span class="num" id="s-total">—</span>&nbsp;Monitored</div>
-  <div class="stat-pill s-run"><span class="num" id="s-run">—</span>&nbsp;Running</div>
-  <div class="stat-pill s-dwn"><span class="num" id="s-dwn">—</span>&nbsp;Not Running</div>
-</div>
-
-<div class="main">
-  <div class="section-label">Processes</div>
-  <div id="proc-list"><div class="empty">Loading…</div></div>
-
-  <div class="section-label" style="margin-top:20px">Performance</div>
-  <div id="perf-list"><div class="empty">Loading…</div></div>
-
-  <div class="section-label" style="margin-top:20px">Disk</div>
-  <div id="disk-list"><div class="empty">Loading…</div></div>
-
-  <div class="section-label" style="margin-top:20px">Network</div>
-  <div id="net-list"><div class="empty">Loading…</div></div>
 </div>
 
 <div class="footer">
@@ -294,17 +273,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   </div>
 </div>
 
-<!-- INSTRUCTIONS MODAL -->
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <div class="modal-head">
-      <div class="modal-icon-wrap">⚠️</div>
-      <div>
-        <div class="modal-title" id="m-title">Process Not Running</div>
-        <div class="modal-exe"   id="m-exe"></div>
-      </div>
-    </div>
-
+    <div class="modal-title" id="m-title">Process Not Running</div>
+    <div class="modal-sub"   id="m-exe"></div>
     <div class="mrow">
       <div class="mrow-label">Current Status</div>
       <div class="mrow-val red">● NOT RUNNING</div>
@@ -321,9 +293,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       <div class="mrow-label">Configured Actions</div>
       <div class="chips" id="m-chips"></div>
     </div>
-
     <div class="modal-note" id="m-note"></div>
-    <button class="btn-close" onclick="closeModal()">✕&nbsp; Close</button>
+    <button class="btn-close" onclick="closeModal()">Close</button>
   </div>
 </div>
 
@@ -333,242 +304,146 @@ const ACT_ICONS = {popup:'🔔', log_to_file:'📝', email_draft:'📧', run_scr
 let cdTimer, cdVal = REFRESH;
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
 function fmtDur(sec){
   if(sec==null||sec<0) return '—';
-  const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
-  if(h>0) return h+'h '+m+'m '+s+'s';
-  if(m>0) return m+'m '+s+'s';
-  return s+'s';
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  if(h>0) return h+'h '+m+'m'; if(m>0) return m+'m '+s+'s'; return s+'s';
+}
+function lvlBadge(lvl){
+  const l=(lvl||'ok').toLowerCase();
+  if(l==='critical') return '<span class="badge badge-red">CRITICAL</span>';
+  if(l==='warning')  return '<span class="badge badge-orange">WARNING</span>';
+  if(l==='unknown')  return '<span class="badge badge-gray">UNKNOWN</span>';
+  return '<span class="badge badge-green">OK</span>';
+}
+function accColor(lvl){
+  const l=(lvl||'ok').toLowerCase();
+  return l==='critical'?'acc-red':l==='warning'?'acc-orange':l==='unknown'?'acc-gray':'acc-green';
 }
 
 function render(d){
-  // header
-  document.getElementById('ver').textContent = 'v'+d.version;
+  document.getElementById('ver').textContent         = 'v'+d.version;
   document.getElementById('refresh-lbl').textContent = 'Refreshed '+d.server_time;
   document.getElementById('footer-lbl').textContent  = 'Last refresh: '+d.server_time;
 
-  // engine
-  const eng = d.engine;
-  const edot=document.getElementById('edot'), etxt=document.getElementById('etxt');
+  const eng=d.engine, edot=document.getElementById('edot'), etxt=document.getElementById('etxt');
   const eh=document.getElementById('ehealth'), pd=document.getElementById('pdot');
   if(eng.ok){
-    edot.className='sdot sdot-green';
-    etxt.textContent='ACTIVE'+(eng.pid?'  ·  PID '+eng.pid:'')+'  ·  process_monitor.ps1';
-    etxt.style.color='var(--green)';
-    eh.innerHTML='<span class="clr-green">State updated '+fmtDur(eng.age_sec)+' ago  ·  Checks are current</span>';
-    pd.className='pulse-dot';
+    edot.className='eng-dot eng-dot-green';
+    etxt.textContent='ENGINE ACTIVE'+(eng.pid?'  ·  PID '+eng.pid:'');
+    etxt.style.color='var(--green)'; eh.textContent='Updated '+fmtDur(eng.age_sec)+' ago'; pd.className='pulse-dot';
   } else if(eng.updated){
-    edot.className='sdot sdot-red';
-    etxt.textContent='STALLED — state file is '+fmtDur(eng.age_sec)+' old';
-    etxt.style.color='var(--red)';
-    eh.innerHTML='<span class="clr-orange">Monitor may have stopped — run start_monitoring.bat</span>';
-    pd.className='pulse-dot off';
+    edot.className='eng-dot eng-dot-red';
+    etxt.textContent='ENGINE STALLED — '+fmtDur(eng.age_sec)+' ago';
+    etxt.style.color='var(--red)'; eh.textContent='Run start_monitoring.bat'; pd.className='pulse-dot off';
   } else {
-    edot.className='sdot sdot-gray';
-    etxt.textContent='NOT RUNNING — run start_monitoring.bat to begin';
-    etxt.style.color='var(--muted)';
-    eh.innerHTML='';
-    pd.className='pulse-dot off';
+    edot.className='eng-dot eng-dot-gray';
+    etxt.textContent='ENGINE NOT RUNNING'; etxt.style.color='var(--muted)';
+    eh.textContent='Run start_monitoring.bat'; pd.className='pulse-dot off';
   }
 
-  // stats
   document.getElementById('s-total').textContent = d.total;
   document.getElementById('s-run').textContent   = d.running_count;
   document.getElementById('s-dwn').textContent   = d.total - d.running_count;
 
-  // process rows
-  const list = document.getElementById('proc-list');
-  if(!d.processes.length){
-    list.innerHTML='<div class="empty">No processes configured in monitoring_settings.json.</div>';
-    return;
-  }
-
-  list.innerHTML = d.processes.map(p => {
-    const run = p.is_running === true;
-    const unk = p.is_running === null;
-    const ac  = run?'ac-green':unk?'ac-gray':'ac-red';
-    const bc  = run?'sbadge-green':unk?'sbadge-gray':'sbadge-red';
-    const st  = run?'● RUNNING':unk?'● UNKNOWN':'● NOT RUNNING';
-
-    let info = '';
-    if(!run && p.down_since){
-      info += `<div class="txt-orange">Down since: ${esc(p.down_since)}${p.down_sec!=null?' ('+fmtDur(p.down_sec)+')':''}</div>`;
-      info += `<div class="txt-alert">Alerts sent: ${p.alert_count}</div>`;
-    } else if(run && p.last_check){
-      info += `<div class="txt-muted">Last check: ${esc(p.last_check)}</div>`;
-    }
-    if(p.actions&&p.actions.length){
-      info += `<div class="tags">${p.actions.map(a=>`<span class="tag">${ACT_ICONS[a]||'•'} ${esc(a)}</span>`).join('')}</div>`;
-    }
-
-    const btn = !run
-      ? `<button class="btn-instr" onclick='showModal(${JSON.stringify(p)})'>Click here for instructions</button>`
-      : '';
-
-    return `<div class="proc-row fade-in">
-  <div class="row-accent ${ac}"></div>
-  <div class="row-body">
-    <div class="proc-name-col">
-      <div class="proc-name">${esc(p.display_name)}</div>
-      <div class="proc-exe">${esc(p.name)}&nbsp;·&nbsp;${p.required?'Required':'Optional'}&nbsp;·&nbsp;Check every ${p.check_sec}s</div>
-    </div>
-    <div class="status-col"><div class="sbadge ${bc}">${st}</div></div>
-    <div class="info-col">${info}</div>
-    <div class="actions-col">${btn}</div>
-  </div>
+  // processes
+  const pl=document.getElementById('proc-list');
+  if(!d.processes.length){ pl.innerHTML='<div class="empty-row">No processes configured.</div>'; }
+  else { pl.innerHTML = d.processes.map(p => {
+    const run=p.is_running===true, unk=p.is_running===null;
+    const lvl=run?'ok':unk?'unknown':'critical';
+    const sub=run?(p.last_check?'Last check: '+esc(p.last_check):''):
+              p.down_since?'Down '+fmtDur(p.down_sec)+' &nbsp;·&nbsp; Alerts: '+p.alert_count:'Not detected';
+    const btn=!run?`<button class="btn-warn" onclick='showModal(${JSON.stringify(p)})'>⚠ Info</button>`:'';
+    return `<div class="item-row fade-in">
+  <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-name"><div class="item-label">${esc(p.display_name)}</div><div class="item-sub">${esc(p.name)}&nbsp;·&nbsp;${p.required?'Required':'Optional'}&nbsp;·&nbsp;${sub}</div></div>
+  <div class="item-badge">${run?'<span class="badge badge-green">RUNNING</span>':unk?'<span class="badge badge-gray">UNKNOWN</span>':'<span class="badge badge-red">NOT RUNNING</span>'}</div>
+  ${btn}
 </div>`;
-  }).join('');
+  }).join(''); }
 
-  // performance rows
-  const pl = document.getElementById('perf-list');
-  if(!d.performance || !d.performance.length){
-    pl.innerHTML='<div class="empty">No data — is performance_monitor.ps1 running?</div>';
-  } else {
-    pl.innerHTML = d.performance.map(m => {
-      const lvl = (m.current_level||'ok').toLowerCase();
-      const ac  = lvl==='critical'?'ac-red':lvl==='warning'?'ac-orange':'ac-green';
-      const fc  = lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
-      const lc  = lvl==='critical'?'lvl-crit':lvl==='warning'?'lvl-warn':'lvl-ok';
-      const val = m.current_value!=null ? Math.round(m.current_value) : null;
-      const pct = m.current_value!=null ? Math.min(100, Math.round(m.current_value)) : 0;
-      return `<div class="perf-row fade-in">
-  <div class="row-accent ${ac}"></div>
-  <div class="row-body">
-    <div class="proc-name-col">
-      <div class="proc-name">${esc(m.display_name)}</div>
-      <div class="proc-exe">Last check: ${esc(m.last_check||'—')}</div>
-    </div>
-    <div class="status-col">
-      <div class="meter-wrap">
-        <span style="font-size:20px;font-weight:700;color:#fff">${val!=null?val+'%':'—'}</span>
-        <div class="meter-bar"><div class="meter-fill ${fc}" style="width:${pct}%"></div></div>
-      </div>
-    </div>
-    <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
-  </div>
+  // performance
+  const pfl=document.getElementById('perf-list');
+  if(!d.performance||!d.performance.length){ pfl.innerHTML='<div class="empty-row">Start performance_monitor.ps1</div>'; }
+  else { pfl.innerHTML = d.performance.map(m => {
+    const lvl=(m.current_level||'ok').toLowerCase();
+    const val=m.current_value!=null?Math.round(m.current_value):null;
+    const pct=m.current_value!=null?Math.min(100,Math.round(m.current_value)):0;
+    const fc=lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
+    return `<div class="item-row fade-in">
+  <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-name"><div class="item-label">${esc(m.display_name)}</div><div class="item-sub">Last check: ${esc(m.last_check||'—')}</div></div>
+  <div class="item-metric"><div class="metric-val">${val!=null?val+'%':'—'}</div><div class="metric-bar"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div></div>
+  <div class="item-badge">${lvlBadge(lvl)}</div>
 </div>`;
-    }).join('');
-  }
+  }).join(''); }
 
-  // disk rows
-  const dl = document.getElementById('disk-list');
-  if(!d.disks || !d.disks.length){
-    dl.innerHTML='<div class="empty">No data — is monitor_disk.ps1 running?</div>';
-  } else {
-    dl.innerHTML = d.disks.map(m => {
-      const lvl = (m.current_level||'ok').toLowerCase();
-      const ac  = lvl==='critical'?'ac-red':lvl==='warning'?'ac-orange':lvl==='unknown'?'ac-gray':'ac-green';
-      const fc  = lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
-      const lc  = lvl==='critical'?'lvl-crit':lvl==='warning'?'lvl-warn':'lvl-ok';
-      const val = m.percent_used!=null ? Math.round(m.percent_used) : null;
-      const pct = m.percent_used!=null ? Math.min(100, Math.round(m.percent_used)) : 0;
-      const sub = m.free_gb!=null ? `${esc(m.drive)}&nbsp;·&nbsp;${m.free_gb} GB free&nbsp;·&nbsp;Last check: ${esc(m.last_check||'—')}` : `${esc(m.drive)}&nbsp;·&nbsp;Unavailable`;
-      return `<div class="perf-row fade-in">
-  <div class="row-accent ${ac}"></div>
-  <div class="row-body">
-    <div class="proc-name-col">
-      <div class="proc-name">${esc(m.display_name)}</div>
-      <div class="proc-exe">${sub}</div>
-    </div>
-    <div class="status-col">
-      <div class="meter-wrap">
-        <span style="font-size:20px;font-weight:700;color:#fff">${val!=null?val+'%':'—'}</span>
-        <div class="meter-bar"><div class="meter-fill ${fc}" style="width:${pct}%"></div></div>
-      </div>
-    </div>
-    <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
-  </div>
+  // disk
+  const dkl=document.getElementById('disk-list');
+  if(!d.disks||!d.disks.length){ dkl.innerHTML='<div class="empty-row">Start monitor_disk.ps1</div>'; }
+  else { dkl.innerHTML = d.disks.map(m => {
+    const lvl=(m.current_level||'ok').toLowerCase();
+    const val=m.percent_used!=null?Math.round(m.percent_used):null;
+    const pct=m.percent_used!=null?Math.min(100,Math.round(m.percent_used)):0;
+    const fc=lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
+    const sub=m.free_gb!=null?`${esc(m.drive)}&nbsp;·&nbsp;${m.free_gb} GB free`:`${esc(m.drive)}&nbsp;·&nbsp;Unavailable`;
+    return `<div class="item-row fade-in">
+  <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-name"><div class="item-label">${esc(m.display_name)}</div><div class="item-sub">${sub}</div></div>
+  <div class="item-metric">${val!=null?`<div class="metric-val">${val}%</div><div class="metric-bar"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div>`:'<div class="metric-val clr-muted">—</div>'}</div>
+  <div class="item-badge">${lvlBadge(lvl)}</div>
 </div>`;
-    }).join('');
-  }
+  }).join(''); }
 
-  // network rows
-  const nl = document.getElementById('net-list');
-  if(!d.network || !d.network.length){
-    nl.innerHTML='<div class="empty">No data — is monitor_network.ps1 running?</div>';
-  } else {
-    nl.innerHTML = d.network.map(m => {
-      const lvl  = (m.current_level||'ok').toLowerCase();
-      const ok   = m.reachable === true;
-      const ac   = lvl==='critical'?'ac-red':lvl==='warning'?'ac-orange':'ac-green';
-      const lc   = lvl==='critical'?'lvl-crit':lvl==='warning'?'lvl-warn':'lvl-ok';
-      const bc   = ok?'sbadge-green':'sbadge-red';
-      const st   = ok?'● ONLINE':'● OFFLINE';
-      const lat  = (ok && m.latency_ms!=null) ? `<span class="txt-muted" style="font-size:12px;margin-left:10px">${m.latency_ms} ms</span>` : '';
-      const sub  = `${esc(m.host)}${m.port?':'+m.port:''}&nbsp;·&nbsp;${esc((m.protocol||'').toUpperCase())}&nbsp;·&nbsp;Last check: ${esc(m.last_check||'—')}`;
-      return `<div class="perf-row fade-in">
-  <div class="row-accent ${ac}"></div>
-  <div class="row-body">
-    <div class="proc-name-col">
-      <div class="proc-name">${esc(m.name)}</div>
-      <div class="proc-exe">${sub}</div>
-    </div>
-    <div class="status-col"><div class="sbadge ${bc}">${st}${lat}</div></div>
-    <div class="info-col"><span class="${lc}">${lvl.toUpperCase()}</span></div>
-  </div>
+  // network
+  const ntl=document.getElementById('net-list');
+  if(!d.network||!d.network.length){ ntl.innerHTML='<div class="empty-row">Start monitor_network.ps1</div>'; }
+  else { ntl.innerHTML = d.network.map(m => {
+    const lvl=(m.current_level||'ok').toLowerCase(), ok=m.reachable===true;
+    const lat=(ok&&m.latency_ms!=null)?`${m.latency_ms} ms`:'';
+    const sub=`${esc(m.host)}${m.port?':'+m.port:''}&nbsp;·&nbsp;${esc((m.protocol||'').toUpperCase())}${lat?'&nbsp;·&nbsp;'+lat:''}`;
+    return `<div class="item-row fade-in">
+  <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-name"><div class="item-label">${esc(m.name)}</div><div class="item-sub">${sub}</div></div>
+  <div class="item-badge">${ok?'<span class="badge badge-green">ONLINE</span>':'<span class="badge badge-red">OFFLINE</span>'}</div>
+  <div class="item-badge">${lvlBadge(lvl)}</div>
 </div>`;
-    }).join('');
-  }
+  }).join(''); }
 }
 
 function showModal(p){
   document.getElementById('m-title').textContent  = p.display_name+' — Not Running';
   document.getElementById('m-exe').textContent    = p.name+(p.required?' · Required':' · Optional');
   document.getElementById('m-alerts').textContent = p.alert_count;
-
-  const dr = document.getElementById('m-down-row');
-  if(p.down_since){
-    dr.style.display='';
-    document.getElementById('m-down').textContent =
-      p.down_since+(p.down_sec!=null?'  ('+fmtDur(p.down_sec)+')':'');
-  } else { dr.style.display='none'; }
-
-  const ar = document.getElementById('m-act-row');
-  const chips = document.getElementById('m-chips');
-  if(p.actions&&p.actions.length){
-    ar.style.display='';
-    chips.innerHTML = p.actions.map(a=>`<span class="chip">${ACT_ICONS[a]||'•'} ${esc(a)}</span>`).join('');
-  } else { ar.style.display='none'; }
-
-  document.getElementById('m-note').textContent = p.instructions ||
-    (p.display_name+' ('+p.name+') is currently not running. '+
-    (p.required?'This process is marked as Required. ':'')+
-    'Start the process manually to stop alerts.');
-
+  const dr=document.getElementById('m-down-row');
+  if(p.down_since){ dr.style.display=''; document.getElementById('m-down').textContent=p.down_since+(p.down_sec!=null?'  ('+fmtDur(p.down_sec)+')':''); }
+  else { dr.style.display='none'; }
+  const ar=document.getElementById('m-act-row'), chips=document.getElementById('m-chips');
+  if(p.actions&&p.actions.length){ ar.style.display=''; chips.innerHTML=p.actions.map(a=>`<span class="chip">${ACT_ICONS[a]||'•'} ${esc(a)}</span>`).join(''); }
+  else { ar.style.display='none'; }
+  document.getElementById('m-note').textContent = p.instructions||
+    (p.display_name+' ('+p.name+') is currently not running. '+(p.required?'This process is marked as Required. ':'')+'Start the process manually to stop alerts.');
   document.getElementById('overlay').classList.add('open');
 }
-
-function closeModal(){
-  document.getElementById('overlay').classList.remove('open');
-}
-
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 
-// ── fetch & countdown ──
 async function fetchStatus(){
   try{
-    const r = await fetch('/api/status');
+    const r=await fetch('/api/status');
     if(!r.ok) throw new Error('HTTP '+r.status);
     render(await r.json());
-  } catch(e){
-    document.getElementById('etxt').textContent='Error: '+e.message;
-  }
+  } catch(e){ document.getElementById('etxt').textContent='Error: '+e.message; }
 }
-
 function startCountdown(){
-  clearInterval(cdTimer);
-  cdVal = REFRESH;
+  clearInterval(cdTimer); cdVal=REFRESH;
   const fill=document.getElementById('cd-fill'), num=document.getElementById('cd-num');
   fill.style.transition='none'; fill.style.width='100%';
   void fill.offsetWidth;
   fill.style.transition=`width ${REFRESH}s linear`; fill.style.width='0%';
-  cdTimer=setInterval(()=>{
-    num.textContent=--cdVal;
-    if(cdVal<=0){ clearInterval(cdTimer); fetchStatus().then(startCountdown); }
-  },1000);
+  cdTimer=setInterval(()=>{ num.textContent=--cdVal; if(cdVal<=0){ clearInterval(cdTimer); fetchStatus().then(startCountdown); } },1000);
 }
-
 fetchStatus().then(startCountdown);
 </script>
 </body>
