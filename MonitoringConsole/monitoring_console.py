@@ -196,6 +196,9 @@ def get_status():
         "disks":         disk_state.get("drives", []),
         "network":       net_state.get("hosts", []),
         "config": {
+            "meta":        cfg.get("_meta", {}),
+            "global":      cfg.get("global", {}),
+            "processes":   cfg.get("processes", []),
             "performance": cfg.get("performance", {}),
             "disk":        cfg.get("disk", []),
             "network":     cfg.get("network", []),
@@ -257,6 +260,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .item-row:last-child{border-bottom:none}
 .item-row:hover{background:var(--bg)}
 .item-accent{width:3px;height:26px;border-radius:2px;flex-shrink:0}
+.item-info{width:16px;height:16px;border-radius:50%;background:#cbd5e1;color:#475569;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;user-select:none;transition:background .15s,color .15s}
+.item-info:hover{background:#64748b;color:#fff}
 .acc-green{background:var(--green)}.acc-red{background:var(--red)}.acc-orange{background:var(--orange)}.acc-gray{background:#94a3b8}
 .item-name{flex:1;min-width:0}
 .item-label{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -286,8 +291,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .sec-head.danger .btn-start{background:#ffffff;color:#dc2626;border-color:#ffffff}
 .sec-head.danger .btn-start:hover{background:#fee2e2}
 .sec-body{background:#ffffff}
-.btn-stop{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
-.btn-stop:hover{background:var(--red-bd)}
+.btn-stop{background:#dc2626;color:#ffffff;border:1px solid #b91c1c;border-radius:5px;padding:4px 11px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(185,28,28,.35);letter-spacing:.3px;text-shadow:0 1px 1px rgba(0,0,0,.2)}
+.btn-stop:hover{background:#b91c1c;border-color:#991b1b;box-shadow:0 2px 6px rgba(185,28,28,.5)}
 .btn-start{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn-start:hover{background:var(--green-bd)}
 
@@ -311,6 +316,31 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .modal-note{background:var(--orange-bg);border:1px solid var(--orange-bd);border-left:3px solid var(--orange);border-radius:7px;padding:10px 13px;font-size:12px;color:var(--text);line-height:1.6;margin-bottom:16px;white-space:pre-line}
 .btn-close{width:100%;padding:9px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
 .btn-close:hover{background:var(--border)}
+
+/* ── DETAILS PANEL ── */
+.det-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-start;justify-content:center;z-index:300;backdrop-filter:blur(4px);overflow-y:auto;padding:28px 16px}
+.det-ov.open{display:flex}
+.det-panel{background:var(--bg2);border:1px solid var(--border);border-radius:13px;width:100%;max-width:700px;box-shadow:0 16px 48px rgba(0,0,0,.2);animation:slideUp .2s ease;margin:auto}
+.det-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 0}
+.det-title{font-size:15px;font-weight:700;color:var(--text)}
+.det-tabs{display:flex;padding:14px 22px 0;border-bottom:2px solid var(--border);gap:2px;overflow-x:auto}
+.det-tab{padding:7px 13px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:5px 5px 0 0}
+.det-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.det-tab:hover:not(.active){background:var(--bg3);color:var(--text)}
+.det-body{padding:18px 22px 22px;max-height:68vh;overflow-y:auto}
+.det-sec{display:none}.det-sec.active{display:block}
+.det-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.det-card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.det-row{display:flex;gap:8px;margin-bottom:6px;font-size:12px}
+.det-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);min-width:125px;flex-shrink:0;padding-top:1px}
+.det-val{color:var(--text);flex:1;word-break:break-all}
+.det-thresh-hd{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:10px 0 6px}
+.det-tlvl{display:flex;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px}
+.det-tlvl-warning{border-left:3px solid var(--orange)}
+.det-tlvl-critical{border-left:3px solid var(--red)}
+.det-act-chip{display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--text);white-space:nowrap}
+.btn-det{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.btn-det:hover{background:var(--border);color:var(--text)}
 
 /* ── ANIMATIONS ── */
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -342,6 +372,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     <span class="version-badge" id="ver">v—</span>
   </div>
   <div class="topbar-right">
+    <button class="btn-det" onclick="showDetails()">&#128269; View all monitoring details</button>
     <div class="pulse-dot" id="pdot"></div>
     <span id="refresh-lbl">Connecting…</span>
   </div>
@@ -382,6 +413,17 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div class="cdbar-wrap">
     Auto-refresh in <span id="cd-num">10</span>s
     <div class="cdbar"><div class="cdbar-fill" id="cd-fill" style="width:100%"></div></div>
+  </div>
+</div>
+
+<div class="det-ov" id="det-ov" onclick="if(event.target===this)closeDet()">
+  <div class="det-panel">
+    <div class="det-head">
+      <div class="det-title">&#128270; Monitoring Configuration Details</div>
+      <button class="btn-close" style="width:auto;padding:5px 16px" onclick="closeDet()">&#10005; Close</button>
+    </div>
+    <div class="det-tabs" id="det-tabs"></div>
+    <div class="det-body" id="det-body"></div>
   </div>
 </div>
 
@@ -503,6 +545,7 @@ function _ttProc(p){
 // ─────────────────────────────────────────────────────────────────────────────
 
 function render(d){
+  _detData = d;
   document.getElementById('ver').textContent         = 'v'+d.version;
   document.getElementById('refresh-lbl').textContent = 'Refreshed '+d.server_time;
   document.getElementById('footer-lbl').textContent  = 'Last refresh: '+d.server_time;
@@ -524,10 +567,10 @@ function render(d){
     if(!head||!ctrl) return;
     if(active){
       head.classList.remove('danger');
-      ctrl.innerHTML=`<button class="btn-stop" onclick="ctrlMonitor('stop','${key}')">Stop Monitoring</button>`;
+      ctrl.innerHTML=`<button class="btn-stop" onclick="ctrlMonitor('stop','${key}')">&#9646;&#9646; Pause Monitoring</button>`;
     } else {
       head.classList.add('danger');
-      ctrl.innerHTML=`<button class="btn-start" onclick="ctrlMonitor('start','${key}')">Start Monitoring</button>`;
+      ctrl.innerHTML=`<button class="btn-start" onclick="ctrlMonitor('start','${key}')">&#9654; Resume Monitoring</button>`;
     }
   });
 
@@ -541,10 +584,11 @@ function render(d){
     const lvl=run?'ok':unk?'unknown':'critical';
     const sub=run?(p.last_check?'Last check: '+esc(p.last_check):''):
               p.down_since?'Down '+fmtDur(p.down_sec)+' &nbsp;·&nbsp; Alerts: '+p.alert_count:'Not detected';
-    const btn=!run?`<button class="btn-warn" onclick='showModal(${JSON.stringify(p)})'>⚠ Info</button>`:'';
+    const btn=!run?`<button class="btn-warn" onclick='showModal(${JSON.stringify(p)})'>&#9881; Perform Actions</button>`:'';
     const ttid=`proc-${i}`; _ttCache[ttid]=_ttProc(p);
-    return `<div class="item-row fade-in" data-ttid="${ttid}">
+    return `<div class="item-row fade-in">
   <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name"><div class="item-label">${esc(p.display_name)}</div><div class="item-sub">${esc(p.name)}&nbsp;·&nbsp;${p.required?'Required':'Optional'}&nbsp;·&nbsp;${sub}</div></div>
   <div class="item-badge">${run?'<span class="badge badge-green">RUNNING</span>':unk?'<span class="badge badge-gray">UNKNOWN</span>':'<span class="badge badge-red">NOT RUNNING</span>'}</div>
   ${btn}
@@ -561,8 +605,9 @@ function render(d){
     const fc=lvl==='critical'?'fill-crit':lvl==='warning'?'fill-warn':'fill-ok';
     const perfCfg=(cfg.performance||{})[m.name]||{};
     const ttid=`perf-${i}`; _ttCache[ttid]=_ttPerf(m,perfCfg);
-    return `<div class="item-row fade-in" data-ttid="${ttid}">
+    return `<div class="item-row fade-in">
   <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name"><div class="item-label">${esc(m.display_name)}</div><div class="item-sub">Last check: ${esc(m.last_check||'—')}</div></div>
   <div class="item-metric"><div class="metric-val">${val!=null?val+'%':'—'}</div><div class="metric-bar"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div></div>
   <div class="item-badge">${lvlBadge(lvl)}</div>
@@ -580,8 +625,9 @@ function render(d){
     const sub=m.free_gb!=null?`${esc(m.drive)}&nbsp;·&nbsp;${m.free_gb} GB free`:`${esc(m.drive)}&nbsp;·&nbsp;Unavailable`;
     const diskCfg=(cfg.disk||[]).find(dc=>dc.drive===m.drive)||{};
     const ttid=`disk-${i}`; _ttCache[ttid]=_ttDisk(m,diskCfg);
-    return `<div class="item-row fade-in" data-ttid="${ttid}">
+    return `<div class="item-row fade-in">
   <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name"><div class="item-label">${esc(m.display_name)}</div><div class="item-sub">${sub}</div></div>
   <div class="item-metric">${val!=null?`<div class="metric-val">${val}%</div><div class="metric-bar"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div>`:'<div class="metric-val clr-muted">—</div>'}</div>
   <div class="item-badge">${lvlBadge(lvl)}</div>
@@ -597,8 +643,9 @@ function render(d){
     const sub=`${esc(m.host)}${m.port?':'+m.port:''}&nbsp;·&nbsp;${esc((m.protocol||'').toUpperCase())}${lat?'&nbsp;·&nbsp;'+lat:''}`;
     const netCfg=(cfg.network||[]).find(nc=>nc.name===m.name)||{};
     const ttid=`net-${i}`; _ttCache[ttid]=_ttNet(m,netCfg);
-    return `<div class="item-row fade-in" data-ttid="${ttid}">
+    return `<div class="item-row fade-in">
   <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name"><div class="item-label">${esc(m.name)}</div><div class="item-sub">${sub}</div></div>
   <div class="item-badge">${ok?'<span class="badge badge-green">ONLINE</span>':'<span class="badge badge-red">OFFLINE</span>'}</div>
   <div class="item-badge">${lvlBadge(lvl)}</div>
@@ -621,7 +668,7 @@ function showModal(p){
   document.getElementById('overlay').classList.add('open');
 }
 function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeDet(); } });
 
 async function ctrlMonitor(action, key){
   const label = key.charAt(0).toUpperCase()+key.slice(1);
@@ -642,6 +689,133 @@ async function ctrlMonitor(action, key){
   } catch(e){
     alert(`Request failed: ${e.message}`);
   }
+}
+
+// ── Details panel ────────────────────────────────────────────────────────────
+let _detData = null;
+let _detTab  = 'settings';
+const DET_TABS   = ['settings','processes','performance','disk','network'];
+const DET_LABELS = ['&#9881; Settings','&#128203; Processes','&#128200; Performance','&#128190; Disk','&#127760; Network'];
+
+function showDetails(){
+  if(!_detData) return;
+  _detRender(_detData);
+  document.getElementById('det-ov').classList.add('open');
+}
+function closeDet(){ document.getElementById('det-ov').classList.remove('open'); }
+
+function _detRender(d){
+  const cfg = d.config||{};
+  document.getElementById('det-tabs').innerHTML = DET_TABS.map((t,i)=>
+    `<div class="det-tab${t===_detTab?' active':''}" onclick="_detSwitch('${t}')">${DET_LABELS[i]}</div>`
+  ).join('');
+  document.getElementById('det-body').innerHTML = DET_TABS.map(t=>
+    `<div class="det-sec${t===_detTab?' active':''}" id="det-sec-${t}">${_detSection(t,cfg)}</div>`
+  ).join('');
+}
+function _detSwitch(t){
+  _detTab = t;
+  document.querySelectorAll('.det-tab').forEach((el,i)=>el.classList.toggle('active', DET_TABS[i]===t));
+  document.querySelectorAll('.det-sec').forEach(el=>el.classList.toggle('active', el.id==='det-sec-'+t));
+}
+function _detSection(tab, cfg){
+  if(tab==='settings')    return _dSettings(cfg.meta||{}, cfg.global||{});
+  if(tab==='processes')   return _dProcesses(cfg.processes||[]);
+  if(tab==='performance') return _dPerformance(cfg.performance||{});
+  if(tab==='disk')        return _dDisk(cfg.disk||[]);
+  if(tab==='network')     return _dNetwork(cfg.network||[]);
+  return '';
+}
+function _drow(lbl,val){ return `<div class="det-row"><div class="det-lbl">${lbl}</div><div class="det-val">${val||'<span style="color:var(--muted)">—</span>'}</div></div>`; }
+
+function _dActions(actions){
+  if(!actions||!actions.length) return '<div style="font-size:11px;color:var(--muted);padding:4px 0">No actions configured</div>';
+  return actions.map(a=>{
+    const icon=ACT_ICONS[a.type]||'•';
+    const lvlClr=a.level==='critical'?'var(--red)':a.level==='warning'?'var(--orange)':'var(--muted)';
+    const template=a.message_template||a.instructions||'';
+    const extra=template?`<div style="font-size:10px;color:var(--muted);margin-top:3px;white-space:pre-wrap">${esc(template.substring(0,140))}${template.length>140?'…':''}</div>`:'';
+    const subj=a.subject_template?`<div style="font-size:10px;color:var(--muted);margin-top:2px">Subject: ${esc(a.subject_template)}</div>`:'';
+    return `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);align-items:flex-start">
+  <span class="det-act-chip">${icon} ${esc(a.type)}</span>
+  <div style="flex:1"><span style="font-size:11px;font-weight:700;color:${lvlClr}">${esc((a.level||'').toUpperCase())}</span>${extra}${subj}</div>
+</div>`;
+  }).join('');
+}
+function _dThresholds(thresholds){
+  if(!thresholds||!thresholds.length) return '<div style="font-size:11px;color:var(--muted);padding:4px 0">No thresholds configured</div>';
+  return thresholds.map(t=>{
+    const badge=`<span class="badge ${t.level==='critical'?'badge-red':'badge-orange'}" style="font-size:9px">${(t.level||'').toUpperCase()}</span>`;
+    const cond=t.description?esc(t.description)
+      :t.percent!=null&&t.sustain_sec!=null?`Above <b>${t.percent}%</b> for <b>${t.sustain_sec}s</b>`
+      :t.percent_used!=null?`Usage above <b>${t.percent_used}%</b>`
+      :t.latency_ms!=null?`Latency above <b>${t.latency_ms}ms</b>`
+      :t.condition?esc(t.condition):'';
+    return `<div class="det-tlvl det-tlvl-${t.level}">
+  <div style="flex:1">${badge} <span style="font-size:12px;margin-left:4px">${cond}</span>
+  <div style="margin-top:8px">${_dActions(t.actions||[])}</div></div>
+</div>`;
+  }).join('');
+}
+
+function _dSettings(meta, gl){
+  return `<div class="det-card">
+  <div class="det-card-title">&#128196; Config Metadata</div>
+  ${_drow('Version',esc(meta.version||'?'))}
+  ${_drow('Last Updated',esc(meta.last_updated||'?'))}
+  ${_drow('Description',esc(meta.description||''))}
+</div>
+<div class="det-card">
+  <div class="det-card-title">&#9881; Global Settings</div>
+  ${_drow('Default Check Interval',`<b>${gl.check_interval_sec||'?'}s</b>`)}
+  ${_drow('Log File',`<code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">${esc(gl.log_file||'')}</code>`)}
+  ${_drow('Log Max Size',`${gl.log_max_size_mb||'?'} MB`)}
+  ${_drow('Email Recipient',esc(gl.email_recipient||''))}
+  ${_drow('Email Sender',esc(gl.email_sender||''))}
+  ${_drow('Scripts Directory',`<code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">${esc(gl.scripts_dir||'')}</code>`)}
+</div>`;
+}
+function _dProcesses(procs){
+  if(!procs.length) return '<div class="empty-row">No processes configured.</div>';
+  return procs.map(p=>{
+    const acts=(p.actions&&p.actions.on_not_running)||[];
+    const reqBadge=p.required?'<span class="badge badge-red" style="font-size:9px">Required</span>':'<span class="badge badge-gray" style="font-size:9px">Optional</span>';
+    return `<div class="det-card">
+  <div class="det-card-title">&#128249; ${esc(p.display_name||p.name)} ${reqBadge}</div>
+  ${_drow('Executable',esc(p.name))}
+  ${_drow('Check Interval',`<b>${p.check_interval_sec||30}s</b>`)}
+  <div class="det-thresh-hd">On Not Running</div>${_dActions(acts)}
+</div>`;
+  }).join('');
+}
+function _dPerformance(perf){
+  const entries=Object.entries(perf);
+  if(!entries.length) return '<div class="empty-row">No performance monitors configured.</div>';
+  return entries.map(([key,m])=>`<div class="det-card">
+  <div class="det-card-title">&#128200; ${esc(key.toUpperCase())}</div>
+  ${_drow('Check Interval',`<b>${m.check_interval_sec||5}s</b>`)}
+  <div class="det-thresh-hd">Thresholds</div>${_dThresholds(m.thresholds)}
+</div>`).join('');
+}
+function _dDisk(disks){
+  if(!disks.length) return '<div class="empty-row">No disk monitors configured.</div>';
+  return disks.map(d=>`<div class="det-card">
+  <div class="det-card-title">&#128190; ${esc(d.display_name||d.drive)}</div>
+  ${_drow('Drive',esc(d.drive))}
+  ${_drow('Check Interval',`<b>${d.check_interval_sec||60}s</b>`)}
+  <div class="det-thresh-hd">Thresholds</div>${_dThresholds(d.thresholds)}
+</div>`).join('');
+}
+function _dNetwork(nets){
+  if(!nets.length) return '<div class="empty-row">No network monitors configured.</div>';
+  return nets.map(n=>`<div class="det-card">
+  <div class="det-card-title">&#127760; ${esc(n.name||n.host)}</div>
+  ${_drow('Host',esc(n.host+(n.port?':'+n.port:'')))}
+  ${_drow('Protocol',esc((n.protocol||'').toUpperCase()))}
+  ${_drow('Timeout',`${n.timeout_sec||5}s`)}
+  ${_drow('Check Interval',`<b>${n.check_interval_sec||30}s</b>`)}
+  <div class="det-thresh-hd">Thresholds</div>${_dThresholds(n.thresholds)}
+</div>`).join('');
 }
 
 async function fetchStatus(){

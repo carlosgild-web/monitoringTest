@@ -120,7 +120,6 @@ if /i "!_RUNNING!"=="yes" (
 )
 
 echo  [START]  %_TITLE%
-start "" powershell -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden ^
-    -File "%_SCRIPT%"
+start "" wscript //nologo "%~dp0scripts\run_hidden.vbs" "%_SCRIPT%"
 
 goto :eof

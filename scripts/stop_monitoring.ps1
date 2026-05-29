@@ -32,6 +32,8 @@ function Write-Line ([string]$text, [ConsoleColor]$color = 'Gray') {
 Write-Line "  Scanning for active monitoring processes..." Gray
 $allPs  = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe' AND ProcessId!=$PID" -ErrorAction SilentlyContinue)
 $allPs += @(Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' AND ProcessId!=$PID"       -ErrorAction SilentlyContinue)
+$allPs += @(Get-CimInstance Win32_Process -Filter "Name='python.exe'"   -ErrorAction SilentlyContinue)
+$allPs += @(Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'"  -ErrorAction SilentlyContinue)
 
 $found = [System.Collections.Generic.List[object]]::new()
 
