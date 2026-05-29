@@ -27,6 +27,18 @@ def _parse_dt(s):
         return None
 
 
+def _check_fresh(path, max_interval_sec):
+    """Return True if the state file exists and was updated within the expected window."""
+    try:
+        d = json.loads(path.read_text(encoding="utf-8-sig"))
+        dt = _parse_dt(d.get("updated", ""))
+        if dt:
+            return int((datetime.now() - dt).total_seconds()) < max_interval_sec * 2 + 20
+    except Exception:
+        pass
+    return False
+
+
 def check_running(exe_name: str):
     """Live check: is exe_name currently running? Returns True/False, or None on error."""
     try:
@@ -55,7 +67,17 @@ def get_status():
     updated_dt   = _parse_dt(updated_str)
     age_sec      = int((datetime.now() - updated_dt).total_seconds()) if updated_dt else None
     max_interval = max((p.get("check_interval_sec", 30) for p in cfg.get("processes", [])), default=30)
-    engine_ok    = age_sec is not None and age_sec < (max_interval * 2 + 15)
+    proc_ok      = age_sec is not None and age_sec < (max_interval * 2 + 15)
+
+    perf_int = cfg.get("performance", {}).get("cpu", {}).get("check_interval_sec", 10)
+    disk_int = min((d.get("check_interval_sec", 60) for d in cfg.get("disk", [])), default=60)
+    net_int  = min((h.get("check_interval_sec", 30) for h in cfg.get("network", [])), default=30)
+    monitors = {
+        "process":     proc_ok,
+        "performance": _check_fresh(PERF_STATE_FILE, perf_int),
+        "disk":        _check_fresh(DISK_STATE_FILE,  disk_int),
+        "network":     _check_fresh(NET_STATE_FILE,   net_int),
+    }
 
     state_map = {p["name"]: p for p in state.get("processes", [])}
     processes = []
@@ -108,8 +130,9 @@ def get_status():
         pass
 
     return {
-        "engine":        {"ok": engine_ok, "updated": updated_str,
-                          "age_sec": age_sec, "pid": state.get("monitor_pid")},
+        "engine":        {"ok": any(monitors.values()), "monitors": monitors,
+                          "updated": updated_str, "age_sec": age_sec,
+                          "pid": state.get("monitor_pid")},
         "processes":     processes,
         "total":         len(processes),
         "running_count": running_count,
@@ -137,7 +160,7 @@ HTML = r"""<!DOCTYPE html>
   --orange:#c2410c;--orange-bg:#fff7ed;--orange-bd:#fed7aa;
   --accent:#2563eb;
 }
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── TOP BAR ── */
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;height:46px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -150,13 +173,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .pulse-dot.off{background:var(--muted);animation:none}
 
 /* ── STATUS BAR ── */
-.status-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;height:36px;display:flex;align-items:center;gap:14px;flex-shrink:0;font-size:12px}
-.eng-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.eng-dot-green{background:var(--green)}.eng-dot-red{background:var(--red)}.eng-dot-gray{background:#94a3b8}
-.eng-txt{font-weight:600}.bar-sep{width:1px;height:16px;background:var(--border)}
+.status-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 18px;height:38px;display:flex;align-items:center;gap:14px;flex-shrink:0;font-size:13px}
+.bar-sep{width:1px;height:16px;background:var(--border)}
 .clr-green{color:var(--green)}.clr-red{color:var(--red)}.clr-muted{color:var(--muted)}
 .stat-pill{display:flex;align-items:center;gap:4px}
-.stat-num{font-weight:700;font-size:13px}
+.stat-num{font-weight:700;font-size:14px}
+.mon-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.mon-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:#94a3b8}
+.mon-active .mon-dot{background:var(--green)}
+.mon-active{color:var(--green)}
 
 /* ── MAIN GRID ── */
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px;flex:1;min-height:0;overflow:hidden}
@@ -170,25 +195,31 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .item-row{display:flex;align-items:center;gap:9px;padding:6px 13px;border-bottom:1px solid var(--border);transition:background .12s;min-height:44px}
 .item-row:last-child{border-bottom:none}
 .item-row:hover{background:var(--bg)}
-.item-accent{width:3px;height:24px;border-radius:2px;flex-shrink:0}
+.item-accent{width:3px;height:26px;border-radius:2px;flex-shrink:0}
 .acc-green{background:var(--green)}.acc-red{background:var(--red)}.acc-orange{background:var(--orange)}.acc-gray{background:#94a3b8}
 .item-name{flex:1;min-width:0}
-.item-label{font-weight:600;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item-metric{flex-shrink:0;text-align:right;min-width:72px}
-.metric-val{font-size:14px;font-weight:700;color:var(--text)}
-.metric-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:3px;width:72px}
+.item-label{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-sub{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-metric{flex-shrink:0;text-align:right;min-width:78px}
+.metric-val{font-size:16px;font-weight:700;color:var(--text)}
+.metric-bar{height:5px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:4px;width:78px}
 .metric-fill{height:100%;border-radius:2px;transition:width .5s ease}
 .fill-ok{background:var(--green)}.fill-warn{background:var(--orange)}.fill-crit{background:var(--red)}
-.item-badge{flex-shrink:0;min-width:70px;text-align:right}
-.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.item-badge{flex-shrink:0;min-width:76px;text-align:right}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
 .badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .badge-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
 .badge-orange{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-bd)}
 .badge-gray{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
-.btn-warn{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:4px}
+.btn-warn{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:4px}
 .btn-warn:hover{background:var(--red-bd)}
-.empty-row{padding:18px 13px;text-align:center;color:var(--muted);font-size:11px}
+.empty-row{padding:18px 13px;text-align:center;color:var(--muted);font-size:12px}
+/* ── SECTION COLORS ── */
+.sec-head{background:var(--bg3)}
+.sec-processes .sec-head{background:#EFF6FF;border-bottom-color:#BFDBFE}.sec-processes .sec-title{color:#1E40AF}.sec-processes .sec-body{background:#FAFCFF}
+.sec-perf .sec-head{background:#F5F3FF;border-bottom-color:#C4B5FD}.sec-perf .sec-title{color:#5B21B6}.sec-perf .sec-body{background:#FDFBFF}
+.sec-disk .sec-head{background:#ECFDF5;border-bottom-color:#A7F3D0}.sec-disk .sec-title{color:#065F46}.sec-disk .sec-body{background:#FAFFFE}
+.sec-net .sec-head{background:#FFF7ED;border-bottom-color:#FED7AA}.sec-net .sec-title{color:#9A3412}.sec-net .sec-body{background:#FFFDF8}
 
 /* ── FOOTER ── */
 .footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);flex-shrink:0}
@@ -233,32 +264,35 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 </div>
 
 <div class="status-bar">
-  <div class="eng-dot eng-dot-gray" id="edot"></div>
-  <span class="eng-txt clr-muted" id="etxt">Connecting…</span>
-  <span class="clr-muted" id="ehealth"></span>
+  <div id="mon-process" class="mon-item"><span class="mon-dot"></span><span>Process</span></div>
+  <div id="mon-perf" class="mon-item"><span class="mon-dot"></span><span>Performance</span></div>
+  <div id="mon-disk" class="mon-item"><span class="mon-dot"></span><span>Disk</span></div>
+  <div id="mon-net" class="mon-item"><span class="mon-dot"></span><span>Network</span></div>
   <div class="bar-sep"></div>
   <div class="stat-pill"><span class="stat-num" id="s-total">—</span>&nbsp;<span class="clr-muted">Monitored</span></div>
   <div class="stat-pill"><span class="stat-num clr-green" id="s-run">—</span>&nbsp;<span class="clr-muted">Running</span></div>
   <div class="stat-pill"><span class="stat-num clr-red" id="s-dwn">—</span>&nbsp;<span class="clr-muted">Not Running</span></div>
+  <div class="bar-sep"></div>
+  <span class="clr-muted" style="font-size:12px" id="ehealth"></span>
 </div>
 
 <div class="main-grid">
   <div class="col">
-    <div class="section">
+    <div class="section sec-processes">
       <div class="sec-head"><span class="sec-title">Processes</span></div>
       <div class="sec-body" id="proc-list"><div class="empty-row">Loading…</div></div>
     </div>
-    <div class="section">
+    <div class="section sec-disk">
       <div class="sec-head"><span class="sec-title">Disk</span></div>
       <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
     </div>
   </div>
   <div class="col">
-    <div class="section">
+    <div class="section sec-perf">
       <div class="sec-head"><span class="sec-title">Performance</span></div>
       <div class="sec-body" id="perf-list"><div class="empty-row">Loading…</div></div>
     </div>
-    <div class="section">
+    <div class="section sec-net">
       <div class="sec-head"><span class="sec-title">Network</span></div>
       <div class="sec-body" id="net-list"><div class="empty-row">Loading…</div></div>
     </div>
@@ -326,21 +360,16 @@ function render(d){
   document.getElementById('refresh-lbl').textContent = 'Refreshed '+d.server_time;
   document.getElementById('footer-lbl').textContent  = 'Last refresh: '+d.server_time;
 
-  const eng=d.engine, edot=document.getElementById('edot'), etxt=document.getElementById('etxt');
-  const eh=document.getElementById('ehealth'), pd=document.getElementById('pdot');
-  if(eng.ok){
-    edot.className='eng-dot eng-dot-green';
-    etxt.textContent='ENGINE ACTIVE'+(eng.pid?'  ·  PID '+eng.pid:'');
-    etxt.style.color='var(--green)'; eh.textContent='Updated '+fmtDur(eng.age_sec)+' ago'; pd.className='pulse-dot';
-  } else if(eng.updated){
-    edot.className='eng-dot eng-dot-red';
-    etxt.textContent='ENGINE STALLED — '+fmtDur(eng.age_sec)+' ago';
-    etxt.style.color='var(--red)'; eh.textContent='Run start_monitoring.bat'; pd.className='pulse-dot off';
-  } else {
-    edot.className='eng-dot eng-dot-gray';
-    etxt.textContent='ENGINE NOT RUNNING'; etxt.style.color='var(--muted)';
-    eh.textContent='Run start_monitoring.bat'; pd.className='pulse-dot off';
-  }
+  const eng=d.engine, eh=document.getElementById('ehealth'), pd=document.getElementById('pdot');
+  const mons=eng.monitors||{};
+  const monIds={process:'mon-process',performance:'mon-perf',disk:'mon-disk',network:'mon-net'};
+  Object.entries(monIds).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el) el.className='mon-item '+(mons[k]?'mon-active':'');
+  });
+  const anyActive=Object.values(mons).some(v=>v);
+  pd.className=anyActive?'pulse-dot':'pulse-dot off';
+  eh.textContent=anyActive?'Updated '+fmtDur(eng.age_sec)+' ago':'Run start_monitoring.bat to activate monitors';
 
   document.getElementById('s-total').textContent = d.total;
   document.getElementById('s-run').textContent   = d.running_count;
