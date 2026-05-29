@@ -183,6 +183,13 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .mon-active .mon-dot{background:var(--green)}
 .mon-active{color:var(--green)}
 
+/* ── ALERT BANNER ── */
+.alert-banner{background:#fff8e1;border-bottom:2px solid #f59e0b;padding:7px 18px;display:none;align-items:center;gap:8px;flex-shrink:0;font-size:12px;color:#92400e;font-weight:500}
+.alert-banner.visible{display:flex}
+.alert-icon{font-size:15px;flex-shrink:0}
+.alert-name{font-weight:700;color:#78350f}
+.alert-link{font-family:monospace;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:1px 6px;font-size:11px;color:#92400e}
+
 /* ── MAIN GRID ── */
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px;flex:1;min-height:0;overflow:hidden}
 .col{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
@@ -269,11 +276,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div id="mon-disk" class="mon-item"><span class="mon-dot"></span><span>Disk</span></div>
   <div id="mon-net" class="mon-item"><span class="mon-dot"></span><span>Network</span></div>
   <div class="bar-sep"></div>
-  <div class="stat-pill"><span class="stat-num" id="s-total">—</span>&nbsp;<span class="clr-muted">Monitored</span></div>
-  <div class="stat-pill"><span class="stat-num clr-green" id="s-run">—</span>&nbsp;<span class="clr-muted">Running</span></div>
-  <div class="stat-pill"><span class="stat-num clr-red" id="s-dwn">—</span>&nbsp;<span class="clr-muted">Not Running</span></div>
-  <div class="bar-sep"></div>
   <span class="clr-muted" style="font-size:12px" id="ehealth"></span>
+</div>
+
+<div class="alert-banner" id="alert-banner">
+  <span class="alert-icon">⚠️</span>
+  <span>Monitor scripts not running: <span class="alert-name" id="alert-names"></span></span>
+  <span style="color:#b45309">—</span>
+  <span>Run <span class="alert-link">start_monitoring.bat</span> to activate.</span>
 </div>
 
 <div class="main-grid">
@@ -369,11 +379,12 @@ function render(d){
   });
   const anyActive=Object.values(mons).some(v=>v);
   pd.className=anyActive?'pulse-dot':'pulse-dot off';
-  eh.textContent=anyActive?'Updated '+fmtDur(eng.age_sec)+' ago':'Run start_monitoring.bat to activate monitors';
+  eh.textContent=anyActive?'Updated '+fmtDur(eng.age_sec)+' ago':'';
 
-  document.getElementById('s-total').textContent = d.total;
-  document.getElementById('s-run').textContent   = d.running_count;
-  document.getElementById('s-dwn').textContent   = d.total - d.running_count;
+  const inactive=Object.entries(mons).filter(([,v])=>!v).map(([k])=>k.charAt(0).toUpperCase()+k.slice(1));
+  const banner=document.getElementById('alert-banner');
+  document.getElementById('alert-names').textContent=inactive.join(', ');
+  banner.classList.toggle('visible', inactive.length>0);
 
   // processes
   const pl=document.getElementById('proc-list');
