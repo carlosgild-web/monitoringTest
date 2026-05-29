@@ -82,7 +82,7 @@ if /i "!_RUNNING!"=="yes" (
 )
 
 echo  [START]  %_TITLE%
-start "%_TITLE%" python "%_SCRIPT%"
+start "" pythonw "%_SCRIPT%"
 goto :eof
 
 
@@ -120,7 +120,7 @@ if /i "!_RUNNING!"=="yes" (
 )
 
 echo  [START]  %_TITLE%
-start "%_TITLE%" powershell -ExecutionPolicy Bypass -NoProfile ^
+start "" powershell -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden ^
     -File "%_SCRIPT%"
 
 goto :eof
