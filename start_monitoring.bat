@@ -10,6 +10,15 @@ echo   Monitoring Solution  ^|  Starting up...
 echo  ================================================
 echo.
 
+:: ── Stop any already-running monitors before starting fresh ──────────────────
+echo  Stopping any running monitors...
+powershell -ExecutionPolicy Bypass -NoProfile -NonInteractive ^
+    -File "%~dp0scripts\stop_monitoring.ps1"
+echo.
+echo  Waiting for processes to exit...
+timeout /t 2 /nobreak >nul
+echo.
+
 :: ══════════════════════════════════════════════════════════════════════════════
 ::  MONITOR SCRIPTS
 ::  Uncomment each line once the corresponding script file has been created.
