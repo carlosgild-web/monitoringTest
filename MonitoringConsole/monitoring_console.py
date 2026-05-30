@@ -287,7 +287,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .group-hdr-lbl{font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:0 10px;white-space:nowrap}
 .section{background:var(--card);border:1px solid var(--border);border-radius:9px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .sec-head{padding:7px 13px 6px;border-bottom:1px solid var(--border);flex-shrink:0}
-.sec-title{font-size:9px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted)}
+.sec-title{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .sec-body{overflow:auto;flex:1}
 
 /* ── ITEM ROW ── */
@@ -317,11 +317,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .empty-row{padding:18px 13px;text-align:center;color:var(--muted);font-size:12px}
 /* ── SECTION COLORS ── */
 .sec-head{background:var(--bg3);display:flex;align-items:center;justify-content:space-between}
-.sec-processes .sec-head{background:#EFF6FF;border-bottom-color:#BFDBFE}.sec-processes .sec-title{color:#1E40AF}
-.sec-perf      .sec-head{background:#F5F3FF;border-bottom-color:#C4B5FD}.sec-perf .sec-title{color:#5B21B6}
-.sec-disk      .sec-head{background:#ECFDF5;border-bottom-color:#A7F3D0}.sec-disk .sec-title{color:#065F46}
-.sec-net       .sec-head{background:#FFF7ED;border-bottom-color:#FED7AA}.sec-net  .sec-title{color:#9A3412}
-.sec-ebook     .sec-head{background:#FEFCE8;border-bottom-color:#FDE047}.sec-ebook .sec-title{color:#854D0E}
+.sec-processes .sec-head,.sec-perf .sec-head,.sec-disk .sec-head,.sec-net .sec-head{background:#9dc8c2;border-bottom-color:#7db0a9}
+.sec-processes .sec-title,.sec-perf .sec-title,.sec-disk .sec-title,.sec-net .sec-title{color:#1a2740}
+.sec-ebook .sec-head{background:#9fa6c8;border-bottom-color:#818ab5}
+.sec-ebook .sec-title{color:#1a2740}
 .sec-head.danger{background:#dc2626 !important;border-bottom-color:#991b1b !important}
 .sec-head.danger .sec-title{color:#ffffff !important}
 .sec-head.danger .btn-start{background:#ffffff;color:#dc2626;border-color:#ffffff}
