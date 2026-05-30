@@ -258,9 +258,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .mon-active .mon-dot{background:var(--green)}
 .mon-active{color:var(--green)}
 
-/* ── MAIN GRID ── */
-.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px;flex:1;min-height:0;overflow:hidden}
-.col{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+/* ── MAIN LAYOUT ── */
+.main-outer{flex:1;overflow-y:auto;padding:8px 14px 14px;min-height:0}
+.sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.content-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.col{display:flex;flex-direction:column;gap:8px}
+.group-hdr{display:flex;align-items:center;gap:0;margin:6px 0 8px}
+.group-hdr-line{flex:1;height:1px;background:var(--border)}
+.group-hdr-lbl{font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:0 10px;white-space:nowrap}
 .section{background:var(--card);border:1px solid var(--border);border-radius:9px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .sec-head{padding:7px 13px 6px;border-bottom:1px solid var(--border);flex-shrink:0}
 .sec-title{font-size:9px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted)}
@@ -398,31 +403,53 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div id="mon-ebook" class="mon-item"><span class="mon-dot"></span><span>Ebook Sales</span></div>
 </div>
 
-<div class="main-grid">
-  <div class="col">
-    <div class="section sec-processes">
-      <div class="sec-head" id="head-process"><span class="sec-title">Processes</span><span id="ctrl-process"></span></div>
-      <div class="sec-body" id="proc-list"><div class="empty-row">Loading…</div></div>
+<div class="main-outer">
+
+  <div class="group-hdr">
+    <div class="group-hdr-line"></div>
+    <span class="group-hdr-lbl">System Monitoring</span>
+    <div class="group-hdr-line"></div>
+  </div>
+
+  <div class="sys-grid">
+    <div class="col">
+      <div class="section sec-processes">
+        <div class="sec-head" id="head-process"><span class="sec-title">Processes</span><span id="ctrl-process"></span></div>
+        <div class="sec-body" id="proc-list"><div class="empty-row">Loading…</div></div>
+      </div>
+      <div class="section sec-disk">
+        <div class="sec-head" id="head-disk"><span class="sec-title">Disk</span><span id="ctrl-disk"></span></div>
+        <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
+      </div>
     </div>
-    <div class="section sec-disk">
-      <div class="sec-head" id="head-disk"><span class="sec-title">Disk</span><span id="ctrl-disk"></span></div>
-      <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
-    </div>
-    <div class="section sec-ebook">
-      <div class="sec-head" id="head-ebook_sales"><span class="sec-title">Ebook Sales</span><span id="ctrl-ebook_sales"></span></div>
-      <div class="sec-body" id="ebook-list"><div class="empty-row">Loading…</div></div>
+    <div class="col">
+      <div class="section sec-perf">
+        <div class="sec-head" id="head-performance"><span class="sec-title">Performance</span><span id="ctrl-performance"></span></div>
+        <div class="sec-body" id="perf-list"><div class="empty-row">Loading…</div></div>
+      </div>
+      <div class="section sec-net">
+        <div class="sec-head" id="head-network"><span class="sec-title">Network</span><span id="ctrl-network"></span></div>
+        <div class="sec-body" id="net-list"><div class="empty-row">Loading…</div></div>
+      </div>
     </div>
   </div>
-  <div class="col">
-    <div class="section sec-perf">
-      <div class="sec-head" id="head-performance"><span class="sec-title">Performance</span><span id="ctrl-performance"></span></div>
-      <div class="sec-body" id="perf-list"><div class="empty-row">Loading…</div></div>
-    </div>
-    <div class="section sec-net">
-      <div class="sec-head" id="head-network"><span class="sec-title">Network</span><span id="ctrl-network"></span></div>
-      <div class="sec-body" id="net-list"><div class="empty-row">Loading…</div></div>
-    </div>
+
+  <div class="group-hdr">
+    <div class="group-hdr-line"></div>
+    <span class="group-hdr-lbl">Content Monitoring</span>
+    <div class="group-hdr-line"></div>
   </div>
+
+  <div class="content-grid">
+    <div class="col">
+      <div class="section sec-ebook">
+        <div class="sec-head" id="head-ebook_sales"><span class="sec-title">Ebook Sales</span><span id="ctrl-ebook_sales"></span></div>
+        <div class="sec-body" id="ebook-list"><div class="empty-row">Loading…</div></div>
+      </div>
+    </div>
+    <div class="col"></div>
+  </div>
+
 </div>
 
 <div class="footer">
@@ -559,6 +586,18 @@ function _ttProc(p){
     `<div class="tt-meta">Process: ${esc(p.name)} &nbsp;·&nbsp; ${p.required?'Required':'Optional'} &nbsp;·&nbsp; Check every ${p.check_sec}s</div>`+
     `<div class="tt-hr"></div><div class="tt-meta">On not running: ${acts||'—'}</div>${instr}`;
 }
+function _ttEbook(es, cfg){
+  const target=parseFloat((cfg||{}).target_usd)||300;
+  const chk=(cfg||{}).check_interval_sec||60;
+  const sales=es.total_sales!=null?parseFloat(es.total_sales):0;
+  const pct=Math.min(100,Math.round((sales/target)*100));
+  const cur=es.error
+    ?`<span style="color:#f87171">Error: ${esc(es.error)}</span>`
+    :`Current: <b>$${sales.toFixed(2)}</b> &nbsp;(${pct}% of $${target} target)`;
+  return `<div class="tt-title">${esc(es.display_name||'Ebook Sales')}</div>`+
+    `<div class="tt-meta">Target: $${target} &nbsp;·&nbsp; Check every ${chk}s</div>`+
+    `<div class="tt-cur">${cur}</div>`;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function render(d){
@@ -671,17 +710,31 @@ function render(d){
 
   // ebook sales
   const ebl=document.getElementById('ebook-list');
-  if(!d.ebook_sales||d.ebook_sales.total_sales==null){
+  const ebookCfg=(cfg.ebook_sales)||{};
+  if(!d.ebook_sales){
     ebl.innerHTML='<div class="empty-row">Start monitor_ebook_sales.ps1</div>';
   } else {
     const es=d.ebook_sales;
-    const sales=parseFloat(es.total_sales)||0;
-    const target=parseFloat(es.target_usd)||300;
-    const pct=Math.min(100,Math.round((sales/target)*100));
-    const fc=pct>=100?'fill-ok':pct>=50?'fill-warn':'fill-crit';
-    const lvl=pct>=100?'ok':pct>=50?'warning':'critical';
-    ebl.innerHTML=`<div class="item-row fade-in">
+    const ttid='ebook-0'; _ttCache[ttid]=_ttEbook(es,ebookCfg);
+    if(es.error){
+      ebl.innerHTML=`<div class="item-row fade-in">
+  <div class="item-accent acc-crit"></div>
+  <div class="item-info" data-ttid="${ttid}">i</div>
+  <div class="item-name">
+    <div class="item-label">${esc(es.display_name||'Ebook Sales')}</div>
+    <div class="item-sub" style="color:var(--red)">${esc(es.error)}</div>
+  </div>
+  <div class="item-badge"><span class="badge badge-red">DATA ERROR</span></div>
+</div>`;
+    } else {
+      const sales=parseFloat(es.total_sales)||0;
+      const target=parseFloat(es.target_usd)||300;
+      const pct=Math.min(100,Math.round((sales/target)*100));
+      const fc=pct>=100?'fill-ok':pct>=50?'fill-warn':'fill-crit';
+      const lvl=pct>=100?'ok':pct>=50?'warning':'critical';
+      ebl.innerHTML=`<div class="item-row fade-in">
   <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name">
     <div class="item-label">${esc(es.display_name||'Ebook Sales')}</div>
     <div class="item-sub">Target: $${target.toFixed(2)}&nbsp;&middot;&nbsp;Updated: ${esc(es.updated||'&mdash;')}</div>
@@ -693,6 +746,7 @@ function render(d){
   </div>
   <div class="item-badge">${lvlBadge(lvl)}</div>
 </div>`;
+    }
   }
 }
 

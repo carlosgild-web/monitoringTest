@@ -19,6 +19,7 @@ $MONITOR_SCRIPTS = @(
     'monitor_memory',
     'monitor_disk',
     'monitor_network',
+    'monitor_ebook_sales',
     'monitoring_console',
     'show_status'
 )

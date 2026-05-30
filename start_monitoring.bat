@@ -33,6 +33,9 @@ call :LaunchScript "Disk Monitor"    "%~dp0scripts\monitor_disk.ps1"
 :: 6. Network Monitor
 call :LaunchScript "Network Monitor" "%~dp0scripts\monitor_network.ps1"
 
+:: 7. Ebook Sales Monitor
+call :LaunchScript "Ebook Sales Monitor" "%~dp0scripts\monitor_ebook_sales.ps1"
+
 :: ══════════════════════════════════════════════════════════════════════════════
 
 echo.
