@@ -17,7 +17,8 @@ SETTINGS_FILE  = BASE / "monitoring_settings.json"
 STATE_FILE     = BASE / "logs" / "process_state.json"
 PERF_STATE_FILE = BASE / "logs" / "performance_state.json"
 DISK_STATE_FILE = BASE / "logs" / "disk_state.json"
-NET_STATE_FILE  = BASE / "logs" / "network_state.json"
+NET_STATE_FILE   = BASE / "logs" / "network_state.json"
+EBOOK_STATE_FILE = BASE / "logs" / "ebook_state.json"
 PORT          = 5758
 
 MONITOR_SCRIPTS = {
@@ -25,6 +26,7 @@ MONITOR_SCRIPTS = {
     "performance": BASE / "scripts" / "performance_monitor.ps1",
     "disk":        BASE / "scripts" / "monitor_disk.ps1",
     "network":     BASE / "scripts" / "monitor_network.ps1",
+    "ebook_sales": BASE / "scripts" / "monitor_ebook_sales.ps1",
 }
 
 
@@ -125,14 +127,16 @@ def get_status():
     max_interval = max((p.get("check_interval_sec", 30) for p in cfg.get("processes", [])), default=30)
     proc_ok      = age_sec is not None and age_sec < (max_interval * 2 + 15)
 
-    perf_int = cfg.get("performance", {}).get("cpu", {}).get("check_interval_sec", 10)
-    disk_int = min((d.get("check_interval_sec", 60) for d in cfg.get("disk", [])), default=60)
-    net_int  = min((h.get("check_interval_sec", 30) for h in cfg.get("network", [])), default=30)
+    perf_int  = cfg.get("performance", {}).get("cpu", {}).get("check_interval_sec", 10)
+    disk_int  = min((d.get("check_interval_sec", 60) for d in cfg.get("disk", [])), default=60)
+    net_int   = min((h.get("check_interval_sec", 30) for h in cfg.get("network", [])), default=30)
+    ebook_int = cfg.get("ebook_sales", {}).get("check_interval_sec", 60)
     monitors = {
         "process":     proc_ok,
-        "performance": _check_fresh(PERF_STATE_FILE, perf_int),
-        "disk":        _check_fresh(DISK_STATE_FILE,  disk_int),
-        "network":     _check_fresh(NET_STATE_FILE,   net_int),
+        "performance": _check_fresh(PERF_STATE_FILE,   perf_int),
+        "disk":        _check_fresh(DISK_STATE_FILE,   disk_int),
+        "network":     _check_fresh(NET_STATE_FILE,    net_int),
+        "ebook_sales": _check_fresh(EBOOK_STATE_FILE,  ebook_int),
     }
 
     state_map = {p["name"]: p for p in state.get("processes", [])}
@@ -185,6 +189,12 @@ def get_status():
     except Exception:
         pass
 
+    ebook_state = {}
+    try:
+        ebook_state = json.loads(EBOOK_STATE_FILE.read_text(encoding="utf-8-sig"))
+    except Exception:
+        pass
+
     return {
         "engine":        {"ok": any(monitors.values()), "monitors": monitors,
                           "updated": updated_str, "age_sec": age_sec,
@@ -195,6 +205,7 @@ def get_status():
         "performance":   perf_state.get("metrics", []),
         "disks":         disk_state.get("drives", []),
         "network":       net_state.get("hosts", []),
+        "ebook_sales":   ebook_state if ebook_state else None,
         "config": {
             "meta":        cfg.get("_meta", {}),
             "global":      cfg.get("global", {}),
@@ -286,6 +297,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .sec-perf      .sec-head{background:#F5F3FF;border-bottom-color:#C4B5FD}.sec-perf .sec-title{color:#5B21B6}
 .sec-disk      .sec-head{background:#ECFDF5;border-bottom-color:#A7F3D0}.sec-disk .sec-title{color:#065F46}
 .sec-net       .sec-head{background:#FFF7ED;border-bottom-color:#FED7AA}.sec-net  .sec-title{color:#9A3412}
+.sec-ebook     .sec-head{background:#FEFCE8;border-bottom-color:#FDE047}.sec-ebook .sec-title{color:#854D0E}
 .sec-head.danger{background:#dc2626 !important;border-bottom-color:#991b1b !important}
 .sec-head.danger .sec-title{color:#ffffff !important}
 .sec-head.danger .btn-start{background:#ffffff;color:#dc2626;border-color:#ffffff}
@@ -383,6 +395,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div id="mon-perf" class="mon-item"><span class="mon-dot"></span><span>Performance</span></div>
   <div id="mon-disk" class="mon-item"><span class="mon-dot"></span><span>Disk</span></div>
   <div id="mon-net" class="mon-item"><span class="mon-dot"></span><span>Network</span></div>
+  <div id="mon-ebook" class="mon-item"><span class="mon-dot"></span><span>Ebook Sales</span></div>
 </div>
 
 <div class="main-grid">
@@ -394,6 +407,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     <div class="section sec-disk">
       <div class="sec-head" id="head-disk"><span class="sec-title">Disk</span><span id="ctrl-disk"></span></div>
       <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
+    </div>
+    <div class="section sec-ebook">
+      <div class="sec-head" id="head-ebook_sales"><span class="sec-title">Ebook Sales</span><span id="ctrl-ebook_sales"></span></div>
+      <div class="sec-body" id="ebook-list"><div class="empty-row">Loading…</div></div>
     </div>
   </div>
   <div class="col">
@@ -552,7 +569,7 @@ function render(d){
 
   const eng=d.engine, pd=document.getElementById('pdot');
   const mons=eng.monitors||{};
-  const monIds={process:'mon-process',performance:'mon-perf',disk:'mon-disk',network:'mon-net'};
+  const monIds={process:'mon-process',performance:'mon-perf',disk:'mon-disk',network:'mon-net',ebook_sales:'mon-ebook'};
   Object.entries(monIds).forEach(([k,id])=>{
     const el=document.getElementById(id);
     if(el) el.className='mon-item '+(mons[k]?'mon-active':'');
@@ -651,6 +668,32 @@ function render(d){
   <div class="item-badge">${lvlBadge(lvl)}</div>
 </div>`;
   }).join(''); }
+
+  // ebook sales
+  const ebl=document.getElementById('ebook-list');
+  if(!d.ebook_sales||d.ebook_sales.total_sales==null){
+    ebl.innerHTML='<div class="empty-row">Start monitor_ebook_sales.ps1</div>';
+  } else {
+    const es=d.ebook_sales;
+    const sales=parseFloat(es.total_sales)||0;
+    const target=parseFloat(es.target_usd)||300;
+    const pct=Math.min(100,Math.round((sales/target)*100));
+    const fc=pct>=100?'fill-ok':pct>=50?'fill-warn':'fill-crit';
+    const lvl=pct>=100?'ok':pct>=50?'warning':'critical';
+    ebl.innerHTML=`<div class="item-row fade-in">
+  <div class="item-accent ${accColor(lvl)}"></div>
+  <div class="item-name">
+    <div class="item-label">${esc(es.display_name||'Ebook Sales')}</div>
+    <div class="item-sub">Target: $${target.toFixed(2)}&nbsp;&middot;&nbsp;Updated: ${esc(es.updated||'&mdash;')}</div>
+  </div>
+  <div class="item-metric">
+    <div class="metric-val">$${sales.toFixed(2)}</div>
+    <div class="metric-bar" title="${pct}% of target"><div class="metric-fill ${fc}" style="width:${pct}%"></div></div>
+    <div style="font-size:10px;color:var(--muted);text-align:right;margin-top:2px">${pct}% of target</div>
+  </div>
+  <div class="item-badge">${lvlBadge(lvl)}</div>
+</div>`;
+  }
 }
 
 function showModal(p){

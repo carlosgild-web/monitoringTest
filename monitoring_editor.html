@@ -84,6 +84,7 @@ hr{border:none;border-top:1px solid var(--bdr);margin:14px 0}
     <button class="nb" onclick="showPanel('memory',this)">Memory Performance</button>
     <button class="nb" onclick="showPanel('disk',this)">Disk <span class="nbg" id="bg-disk">2</span></button>
     <button class="nb" onclick="showPanel('network',this)">Network <span class="nbg" id="bg-network">2</span></button>
+    <button class="nb" onclick="showPanel('ebook',this)">Ebook Sales <span class="nbg" id="bg-ebook">&#9679;</span></button>
   </nav>
   <div id="stools">
     <button id="btn-save" class="btn sbtn save-btn" onclick="saveSettings()">&#128190; Save Changes</button>
@@ -109,6 +110,7 @@ hr{border:none;border-top:1px solid var(--bdr);margin:14px 0}
     <div id="panel-memory" class="panel"></div>
     <div id="panel-disk" class="panel"></div>
     <div id="panel-network" class="panel"></div>
+    <div id="panel-ebook" class="panel"></div>
   </div>
 </div>
 
@@ -166,7 +168,7 @@ function tog(hdr){
 }
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
-const TITLES={global:'Global Settings',processes:'Processes',cpu:'CPU Performance',memory:'Memory Performance',disk:'Disk Monitoring',network:'Network Monitoring'};
+const TITLES={global:'Global Settings',processes:'Processes',cpu:'CPU Performance',memory:'Memory Performance',disk:'Disk Monitoring',network:'Network Monitoring',ebook:'Ebook Sales'};
 function showPanel(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
@@ -179,6 +181,8 @@ function updateBadges(){
   document.getElementById('bg-processes').textContent=S.processes.length;
   document.getElementById('bg-disk').textContent=S.disk.length;
   document.getElementById('bg-network').textContent=S.network.length;
+  const ebEl=document.getElementById('bg-ebook');
+  if(ebEl) ebEl.textContent=S.ebook_sales?'1':'0';
 }
 
 // ─── Action rendering ────────────────────────────────────────────────────────
@@ -532,6 +536,20 @@ function addNetwork(){
 }
 function rmNetwork(i){ if(confirm('Remove this monitor?')){ S.network.splice(i,1); renderNetwork(); markDirty(); } }
 
+function renderEbookSales(){
+  const eb=S.ebook_sales||{display_name:'Total Ebook Sales',target_usd:300,check_interval_sec:60};
+  document.getElementById('panel-ebook').innerHTML=`
+  <div class="card">
+    <div class="ch open" onclick="tog(this)"><span class="cv">&#9660;</span><span class="ct">Ebook Sales — Settings</span></div>
+    <div class="cb open"><div class="grid">
+      <div class="fg"><label>Display Name</label><input type="text" value="${esc(eb.display_name)}" data-p="ebook_sales.display_name"></div>
+      <div class="fg"><label>Daily Sales Target (USD $)</label><input type="number" value="${eb.target_usd}" data-p="ebook_sales.target_usd"></div>
+      <div class="fg"><label>Check Interval (sec)</label><input type="number" value="${eb.check_interval_sec}" data-p="ebook_sales.check_interval_sec"></div>
+    </div></div>
+  </div>`;
+  updateBadges();
+}
+
 function rerender(sec,openCards){
   if(sec==='global') renderGlobal();
   else if(sec==='processes') renderProcesses(openCards);
@@ -539,6 +557,7 @@ function rerender(sec,openCards){
   else if(sec==='memory') renderPerf('memory');
   else if(sec==='disk') renderDisk();
   else if(sec==='network') renderNetwork();
+  else if(sec==='ebook') renderEbookSales();
   updateBadges();
 }
 
@@ -546,6 +565,7 @@ function renderAll(){
   renderGlobal(); renderProcesses();
   renderPerf('cpu'); renderPerf('memory');
   renderDisk(); renderNetwork();
+  renderEbookSales();
   updateBadges();
 }
 
