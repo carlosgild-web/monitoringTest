@@ -1,3 +1,6 @@
+# Documentation folder (local only, not tracked)
+docs_Monitorig/
+
 # Runtime logs and state files
 logs/monitor.log
 logs/process_state.json
