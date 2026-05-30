@@ -42,8 +42,8 @@ echo.
 echo  Waiting for monitors to initialise...
 timeout /t 3 /nobreak >nul
 
-:: Open the Web Monitoring Console
-call :LaunchPython "Monitoring Console" "%~dp0MonitoringConsole\monitoring_console.py"
+:: Open the Web Monitoring Console  (port 5758 — used as duplicate guard)
+call :LaunchPython "Monitoring Console" "%~dp0MonitoringConsole\monitoring_console.py" 5758
 
 echo.
 echo  ================================================
@@ -64,24 +64,22 @@ exit /b 0
 :LaunchPython
 set "_TITLE=%~1"
 set "_SCRIPT=%~2"
-set "_NAME=%~n2"
+set "_PORT=%~3"
 
 if not exist "%_SCRIPT%" (
     echo  [SKIP]   %_TITLE%  -- script not found
     goto :eof
 )
 
-for /f "tokens=*" %%R in ('powershell -NoProfile -Command ^
-    "$n='%_NAME%';" ^
-    "$ps=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue ^| Where-Object {" ^
-    "  $_.Name -like 'python*' -and $_.CommandLine -like ('*'+$n+'*')" ^
-    "};" ^
-    "if ($ps) { 'yes' } else { 'no' }" ^
-    2^>nul') do set "_RUNNING=%%R"
-
-if /i "!_RUNNING!"=="yes" (
-    echo  [SKIP]   %_TITLE%  -- already running
-    goto :eof
+:: Check if the port is already in use — more reliable than process name matching
+if not "%_PORT%"=="" (
+    for /f "tokens=*" %%R in ('powershell -NoProfile -Command ^
+        "if (Get-NetTCPConnection -LocalPort %_PORT% -State Listen -ErrorAction SilentlyContinue) { 'yes' } else { 'no' }" ^
+        2^>nul') do set "_RUNNING=%%R"
+    if /i "!_RUNNING!"=="yes" (
+        echo  [SKIP]   %_TITLE%  -- already running on port %_PORT%
+        goto :eof
+    )
 )
 
 echo  [START]  %_TITLE%

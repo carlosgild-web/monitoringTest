@@ -6,6 +6,8 @@ Usage: python monitoring_console.py
 """
 import json
 import subprocess
+import threading
+import time
 import webbrowser
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -986,5 +988,6 @@ if __name__ == "__main__":
     print(f"  Dashboard : {url}")
     print(f"  Settings  : {SETTINGS_FILE}")
     print("  Stop      : Ctrl+C\n")
-    webbrowser.open(url)
+    # Open browser after a 1-second delay so the server is ready to accept connections
+    threading.Thread(target=lambda: (time.sleep(1), webbrowser.open(url)), daemon=True).start()
     ThreadedServer(("localhost", PORT), Handler).serve_forever()
