@@ -70,6 +70,24 @@ def start_monitor(key: str) -> dict:
         return {"ok": False, "error": "unknown monitor"}
     if not path.exists():
         return {"ok": False, "error": f"script not found: {path}"}
+    stem = path.stem
+    # Check if the script process is already running before spawning another instance
+    check_cmd = (
+        f"$n='{stem}';"
+        f"if(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue"
+        f"|Where-Object{{$_.Name -like 'power*' -and $_.ProcessId -ne $PID -and $_.CommandLine -like ('*'+$n+'*')}}){{exit 0}}else{{exit 1}}"
+    )
+    try:
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", check_cmd],
+            capture_output=True, timeout=10,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        if r.returncode == 0:
+            return {"ok": False, "already_running": True,
+                    "error": f"The {key} monitor is already running — no action needed."}
+    except Exception:
+        pass
     subprocess.Popen(
         ["powershell", "-ExecutionPolicy", "Bypass", "-NoProfile",
          "-WindowStyle", "Hidden", "-File", str(path)],
@@ -149,7 +167,7 @@ def get_status():
         on_not_running = pc.get("actions", {}).get("on_not_running", [])
         actions     = [a.get("type", "") for a in on_not_running]
         instructions = next((a["instructions"] for a in on_not_running if a.get("instructions")), "")
-        live        = check_running(nm)
+        live        = check_running(nm) if proc_ok else None
         is_running  = live if live is not None else sp.get("is_running")
         down_since  = sp.get("down_since")
         down_sec    = None
@@ -262,9 +280,8 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 /* ── MAIN LAYOUT ── */
 .main-outer{flex:1;overflow-y:auto;padding:8px 14px 14px;min-height:0}
-.sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
-.content-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.col{display:flex;flex-direction:column;gap:8px}
+.console-layout{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.col-system,.col-content{display:flex;flex-direction:column;gap:8px}
 .group-hdr{display:flex;align-items:center;gap:0;margin:6px 0 8px}
 .group-hdr-line{flex:1;height:1px;background:var(--border)}
 .group-hdr-lbl{font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);padding:0 10px;white-space:nowrap}
@@ -314,6 +331,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .btn-stop:hover{background:#b91c1c;border-color:#991b1b;box-shadow:0 2px 6px rgba(185,28,28,.5)}
 .btn-start{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn-start:hover{background:var(--green-bd)}
+.sec-body.monitor-paused{filter:grayscale(1) opacity(.45);pointer-events:none}
 
 /* ── FOOTER ── */
 .footer{background:var(--bg2);border-top:1px solid var(--border);height:32px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);flex-shrink:0}
@@ -406,52 +424,45 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 </div>
 
 <div class="main-outer">
+  <div class="console-layout">
 
-  <div class="group-hdr">
-    <div class="group-hdr-line"></div>
-    <span class="group-hdr-lbl">System Monitoring</span>
-    <div class="group-hdr-line"></div>
-  </div>
-
-  <div class="sys-grid">
-    <div class="col">
+    <div class="col-system">
+      <div class="group-hdr">
+        <div class="group-hdr-line"></div>
+        <span class="group-hdr-lbl">System Monitoring</span>
+        <div class="group-hdr-line"></div>
+      </div>
       <div class="section sec-processes">
         <div class="sec-head" id="head-process"><span class="sec-title">Processes</span><span id="ctrl-process"></span></div>
         <div class="sec-body" id="proc-list"><div class="empty-row">Loading…</div></div>
       </div>
-      <div class="section sec-disk">
-        <div class="sec-head" id="head-disk"><span class="sec-title">Disk</span><span id="ctrl-disk"></span></div>
-        <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
-      </div>
-    </div>
-    <div class="col">
       <div class="section sec-perf">
         <div class="sec-head" id="head-performance"><span class="sec-title">Performance</span><span id="ctrl-performance"></span></div>
         <div class="sec-body" id="perf-list"><div class="empty-row">Loading…</div></div>
+      </div>
+      <div class="section sec-disk">
+        <div class="sec-head" id="head-disk"><span class="sec-title">Disk</span><span id="ctrl-disk"></span></div>
+        <div class="sec-body" id="disk-list"><div class="empty-row">Loading…</div></div>
       </div>
       <div class="section sec-net">
         <div class="sec-head" id="head-network"><span class="sec-title">Network</span><span id="ctrl-network"></span></div>
         <div class="sec-body" id="net-list"><div class="empty-row">Loading…</div></div>
       </div>
     </div>
-  </div>
 
-  <div class="group-hdr">
-    <div class="group-hdr-line"></div>
-    <span class="group-hdr-lbl">Content Monitoring</span>
-    <div class="group-hdr-line"></div>
-  </div>
-
-  <div class="content-grid">
-    <div class="col">
+    <div class="col-content">
+      <div class="group-hdr">
+        <div class="group-hdr-line"></div>
+        <span class="group-hdr-lbl">Content Monitoring</span>
+        <div class="group-hdr-line"></div>
+      </div>
       <div class="section sec-ebook">
         <div class="sec-head" id="head-ebook_sales"><span class="sec-title">Ebook Sales</span><span id="ctrl-ebook_sales"></span></div>
         <div class="sec-body" id="ebook-list"><div class="empty-row">Loading…</div></div>
       </div>
     </div>
-    <div class="col"></div>
-  </div>
 
+  </div>
 </div>
 
 <div class="footer">
@@ -503,7 +514,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 <script>
 const REFRESH = 10;
 const ACT_ICONS = {popup:'🔔', log_to_file:'📝', email_draft:'📧', run_script:'⚙️'};
+const KEY_TO_BODY={process:'proc-list',performance:'perf-list',disk:'disk-list',network:'net-list',ebook_sales:'ebook-list'};
 let cdTimer, cdVal = REFRESH;
+const pendingStop = new Set();
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDur(sec){
@@ -622,13 +635,17 @@ function render(d){
   Object.entries(mons).forEach(([key, active])=>{
     const head=document.getElementById('head-'+key);
     const ctrl=document.getElementById('ctrl-'+key);
+    const body=document.getElementById(KEY_TO_BODY[key]);
     if(!head||!ctrl) return;
     if(active){
       head.classList.remove('danger');
       ctrl.innerHTML=`<button class="btn-stop" onclick="ctrlMonitor('stop','${key}')">&#9646;&#9646; Pause Monitoring</button>`;
+      if(body) body.classList.remove('monitor-paused');
     } else {
       head.classList.add('danger');
       ctrl.innerHTML=`<button class="btn-start" onclick="ctrlMonitor('start','${key}')">&#9654; Resume Monitoring</button>`;
+      if(body) body.classList.add('monitor-paused');
+      pendingStop.delete(key);
     }
   });
 
@@ -771,21 +788,30 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); cl
 
 async function ctrlMonitor(action, key){
   const label = key.charAt(0).toUpperCase()+key.slice(1);
-  const verb  = action==='stop' ? 'STOP' : 'START';
-  const msg   = action==='stop'
-    ? `Stop the ${label} monitor?\n\nThis will terminate the background script. You can restart it from this console.`
-    : `Start the ${label} monitor?\n\nThis will launch the background script.`;
+  if(action==='stop' && pendingStop.has(key)){
+    alert(`A Pause action for the ${label} monitor is already running in the background.\nPlease wait a moment — the monitor will stop shortly.`);
+    return;
+  }
+  const msg = action==='stop'
+    ? `Pause the ${label} monitor?\n\nThis will terminate the background script. You can resume it from this console.`
+    : `Resume the ${label} monitor?\n\nThis will launch the background script.`;
   if(!confirm(msg)) return;
+  if(action==='stop') pendingStop.add(key);
   try{
     const r = await fetch(`/api/${action}/${key}`, {method:'POST'});
     const d = await r.json();
-    if(d.ok){
-      alert(`${verb} command sent for ${label} monitor.`);
+    if(d.already_running){
+      alert(`The ${label} monitor is already running — no action needed.`);
+      fetchStatus();
+    } else if(d.ok){
+      if(action==='start') alert(`Resume command sent for ${label} monitor.`);
       fetchStatus();
     } else {
+      if(action==='stop') pendingStop.delete(key);
       alert(`Could not ${action} ${label} monitor:\n${d.error||'Unknown error'}`);
     }
   } catch(e){
+    if(action==='stop') pendingStop.delete(key);
     alert(`Request failed: ${e.message}`);
   }
 }

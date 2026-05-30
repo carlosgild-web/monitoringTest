@@ -60,15 +60,29 @@ Write-Host ""
 $stopped = 0
 $failed  = 0
 
+$stoppedPids = [System.Collections.Generic.List[int]]::new()
+
 foreach ($item in $found) {
     try {
         Stop-Process -Id $item.PID -Force -ErrorAction Stop
         Write-Line "  [STOPPED]  $($item.Script)   (PID $($item.PID))" Red
+        $stoppedPids.Add($item.PID)
         $stopped++
     }
     catch {
         Write-Line "  [FAILED ]  $($item.Script)   (PID $($item.PID)) - $_" Yellow
         $failed++
+    }
+}
+
+# Wait for every stopped process to fully exit before returning.
+# Without this, WMI still returns dying processes as running for a brief
+# window, causing LaunchScript to [SKIP] them on the very next start.
+if ($stoppedPids.Count -gt 0) {
+    Write-Host ""
+    Write-Line "  Waiting for processes to exit..." Gray
+    foreach ($pid in $stoppedPids) {
+        try { Wait-Process -Id $pid -Timeout 10 -ErrorAction SilentlyContinue } catch {}
     }
 }
 
