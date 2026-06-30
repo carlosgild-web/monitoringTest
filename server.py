@@ -6,6 +6,7 @@ Serves monitoring_editor.html and exposes two API routes:
   POST /api/settings  — writes monitoring_settings.json
 """
 import json
+import os
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
@@ -39,6 +40,18 @@ class Handler(BaseHTTPRequestHandler):
                 encoding="utf-8",
             )
             self._send(b'{"ok":true}', "application/json")
+        elif self.path == "/api/open-file":
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            rel = json.loads(body).get("path", "")
+            target = (BASE / rel).resolve()
+            if target.exists():
+                os.startfile(str(target))
+                self._send(b'{"ok":true}', "application/json")
+            else:
+                self._send(
+                    json.dumps({"ok": False, "error": f"File not found: {rel}"}).encode(),
+                    "application/json",
+                )
         else:
             self.send_error(404)
 

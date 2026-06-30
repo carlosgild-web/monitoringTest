@@ -537,7 +537,7 @@ function addNetwork(){
 function rmNetwork(i){ if(confirm('Remove this monitor?')){ S.network.splice(i,1); renderNetwork(); markDirty(); } }
 
 function renderEbookSales(){
-  const eb=S.ebook_sales||{display_name:'Total Ebook Sales',target_usd:300,check_interval_sec:60};
+  const eb=S.ebook_sales||{display_name:'Total Ebook Sales',target_usd:300,check_interval_sec:60,xlsx_path:'docs_Monitorig\\PowerBIData.xlsx',sheet_name:'Actual',subtype_column:'Subtype',data_column:'Out',filter_value:'Ebook'};
   document.getElementById('panel-ebook').innerHTML=`
   <div class="card">
     <div class="ch open" onclick="tog(this)"><span class="cv">&#9660;</span><span class="ct">Ebook Sales — Settings</span></div>
@@ -545,9 +545,23 @@ function renderEbookSales(){
       <div class="fg"><label>Display Name</label><input type="text" value="${esc(eb.display_name)}" data-p="ebook_sales.display_name"></div>
       <div class="fg"><label>Daily Sales Target (USD $)</label><input type="number" value="${eb.target_usd}" data-p="ebook_sales.target_usd"></div>
       <div class="fg"><label>Check Interval (sec)</label><input type="number" value="${eb.check_interval_sec}" data-p="ebook_sales.check_interval_sec"></div>
+      <div class="fg"><label>Excel File Path (relative to project root)</label><div style="display:flex;gap:6px;align-items:center"><input type="text" value="${esc(eb.xlsx_path)}" data-p="ebook_sales.xlsx_path" style="flex:1"><button onclick="openEbookFile()" title="Open this file" style="white-space:nowrap;padding:4px 10px;cursor:pointer">&#128196; Open File</button></div></div>
+      <div class="fg"><label>Sheet Name</label><input type="text" value="${esc(eb.sheet_name)}" data-p="ebook_sales.sheet_name"></div>
+      <div class="fg"><label>Subtype Column</label><input type="text" value="${esc(eb.subtype_column)}" data-p="ebook_sales.subtype_column"></div>
+      <div class="fg"><label>Data Column</label><input type="text" value="${esc(eb.data_column)}" data-p="ebook_sales.data_column"></div>
+      <div class="fg"><label>Filter Value (Subtype =)</label><input type="text" value="${esc(eb.filter_value)}" data-p="ebook_sales.filter_value"></div>
     </div></div>
   </div>`;
   updateBadges();
+}
+
+function openEbookFile(){
+  const path=document.querySelector('[data-p="ebook_sales.xlsx_path"]').value.trim();
+  if(!path){alert('No file path set.');return;}
+  fetch('/api/open-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})})
+    .then(r=>r.json())
+    .then(d=>{if(!d.ok)alert('Could not open file:\n'+(d.error||'Unknown error'));})
+    .catch(()=>alert('Server unavailable — is the editor server running?'));
 }
 
 function rerender(sec,openCards){

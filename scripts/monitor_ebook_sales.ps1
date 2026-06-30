@@ -2,10 +2,9 @@ $ErrorActionPreference = 'Continue'
 
 $ProjectRoot  = Split-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) -Parent
 $SettingsFile = Join-Path $ProjectRoot "monitoring_settings.json"
-$XlsxFile     = Join-Path $ProjectRoot "docs_Monitorig\PowerBIData.xlsx"
 $StateFile    = Join-Path $ProjectRoot "logs\ebook_state.json"
 
-function Get-EbookTotal {
+function Get-EbookTotal($XlsxFile, $sheetName, $subtypeHdr, $dataHdr, $filterVal) {
     $excel    = $null
     $workbook = $null
     try {
@@ -16,7 +15,7 @@ function Get-EbookTotal {
 
         $sheet = $null
         foreach ($ws in $workbook.Sheets) {
-            if ($ws.Name -eq "Actual") { $sheet = $ws; break }
+            if ($ws.Name -eq $sheetName) { $sheet = $ws; break }
         }
         if ($null -eq $sheet) { return $null }
 
@@ -27,15 +26,15 @@ function Get-EbookTotal {
 
         for ($c = 1; $c -le $lastCol; $c++) {
             $header = $sheet.Cells.Item(1, $c).Value2
-            if ($header -eq "Subtype") { $subtypeCol = $c }
-            if ($header -eq "Out")     { $outCol     = $c }
+            if ($header -eq $subtypeHdr) { $subtypeCol = $c }
+            if ($header -eq $dataHdr)    { $outCol     = $c }
         }
         if ($null -eq $subtypeCol -or $null -eq $outCol) { return $null }
 
         $total = 0.0
         for ($r = 2; $r -le $lastRow; $r++) {
             $subtype = $sheet.Cells.Item($r, $subtypeCol).Value2
-            if ($subtype -eq "Ebook") {
+            if ($subtype -eq $filterVal) {
                 $val = $sheet.Cells.Item($r, $outCol).Value2
                 if ($null -ne $val) { $total += [double]$val }
             }
@@ -63,8 +62,14 @@ while ($true) {
         $targetUsd   = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.target_usd)        { [double]$ebookCfg.target_usd }        else { 300.0 }
         $checkSec    = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.check_interval_sec) { [int]$ebookCfg.check_interval_sec }    else { 60 }
         $displayName = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.display_name)       { [string]$ebookCfg.display_name }       else { "Total Ebook Sales" }
+        $xlsxRel     = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.xlsx_path)          { [string]$ebookCfg.xlsx_path }          else { "docs_Monitorig\PowerBIData.xlsx" }
+        $sheetName   = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.sheet_name)         { [string]$ebookCfg.sheet_name }         else { "Actual" }
+        $subtypeHdr  = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.subtype_column)     { [string]$ebookCfg.subtype_column }     else { "Subtype" }
+        $dataHdr     = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.data_column)        { [string]$ebookCfg.data_column }        else { "Out" }
+        $filterVal   = if ($null -ne $ebookCfg -and $null -ne $ebookCfg.filter_value)       { [string]$ebookCfg.filter_value }       else { "Ebook" }
+        $XlsxFile    = Join-Path $ProjectRoot $xlsxRel
 
-        $total = Get-EbookTotal
+        $total = Get-EbookTotal $XlsxFile $sheetName $subtypeHdr $dataHdr $filterVal
         $ts    = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
         if ($null -ne $total) {
@@ -73,6 +78,7 @@ while ($true) {
                 display_name = $displayName
                 total_sales  = $total
                 target_usd   = $targetUsd
+                filter_value = $filterVal
             }
         } else {
             $state = [ordered]@{
@@ -80,6 +86,7 @@ while ($true) {
                 display_name = $displayName
                 total_sales  = 0.0
                 target_usd   = $targetUsd
+                filter_value = $filterVal
                 error        = "Could not read xlsx data"
             }
         }

@@ -214,6 +214,7 @@ def get_status():
         ebook_state = json.loads(EBOOK_STATE_FILE.read_text(encoding="utf-8-sig"))
     except Exception:
         pass
+    ebook_filter = cfg.get("ebook_sales", {}).get("filter_value", "Ebook")
 
     return {
         "engine":        {"ok": any(monitors.values()), "monitors": monitors,
@@ -226,6 +227,7 @@ def get_status():
         "disks":         disk_state.get("drives", []),
         "network":       net_state.get("hosts", []),
         "ebook_sales":   ebook_state if ebook_state else None,
+        "ebook_filter":  ebook_filter,
         "config": {
             "meta":        cfg.get("_meta", {}),
             "global":      cfg.get("global", {}),
@@ -608,7 +610,7 @@ function _ttEbook(es, cfg){
   const cur=es.error
     ?`<span style="color:#f87171">Error: ${esc(es.error)}</span>`
     :`Current: <b>$${sales.toFixed(2)}</b> &nbsp;(${pct}% of $${target} target)`;
-  return `<div class="tt-title">${esc(es.display_name||'Ebook Sales')}</div>`+
+  return `<div class="tt-title">${'Total '+(es.filter_value||'Ebook')+' Sales'}</div>`+
     `<div class="tt-meta">Target: $${target} &nbsp;·&nbsp; Check every ${chk}s</div>`+
     `<div class="tt-cur">${cur}</div>`;
 }
@@ -733,13 +735,14 @@ function render(d){
     ebl.innerHTML='<div class="empty-row">Start monitor_ebook_sales.ps1</div>';
   } else {
     const es=d.ebook_sales;
+    es.filter_value=es.filter_value||d.ebook_filter||'Ebook';
     const ttid='ebook-0'; _ttCache[ttid]=_ttEbook(es,ebookCfg);
     if(es.error){
       ebl.innerHTML=`<div class="item-row fade-in">
   <div class="item-accent acc-crit"></div>
   <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name">
-    <div class="item-label">${esc(es.display_name||'Ebook Sales')}</div>
+    <div class="item-label">${'Total '+(es.filter_value||'Ebook')+' Sales'}</div>
     <div class="item-sub" style="color:var(--red)">${esc(es.error)}</div>
   </div>
   <div class="item-badge"><span class="badge badge-red">DATA ERROR</span></div>
@@ -754,7 +757,7 @@ function render(d){
   <div class="item-accent ${accColor(lvl)}"></div>
   <div class="item-info" data-ttid="${ttid}">i</div>
   <div class="item-name">
-    <div class="item-label">${esc(es.display_name||'Ebook Sales')}</div>
+    <div class="item-label">${'Total '+(es.filter_value||'Ebook')+' Sales'}</div>
     <div class="item-sub">Target: $${target.toFixed(2)}&nbsp;&middot;&nbsp;Updated: ${esc(es.updated||'&mdash;')}</div>
   </div>
   <div class="item-metric">
@@ -766,6 +769,9 @@ function render(d){
 </div>`;
     }
   }
+  const _fv=d.ebook_filter||'Ebook';
+  document.querySelector('#head-ebook_sales .sec-title').textContent=_fv+' Sales';
+  document.querySelector('#mon-ebook span:last-child').textContent=_fv+' Sales';
 }
 
 function showModal(p){

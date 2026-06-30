@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "version": "1.3.0",
-    "last_updated": "2026-05-30",
+    "version": "1.4.0",
+    "last_updated": "2026-06-30",
     "description": "Server monitoring configuration — defines what to watch, thresholds, and automated actions.",
     "update_notes": "Bump version and update last_updated whenever you change this file."
   },
@@ -65,7 +65,7 @@
         {
           "level": "critical",
           "percent": 95,
-          "sustain_sec": 5,
+          "sustain_sec": 20,
           "description": "CPU at 30 % sustained for 5 s",
           "actions": [
             {
@@ -319,8 +319,13 @@
   ],
   "ebook_sales": {
     "display_name": "Total Ebook Sales",
-    "target_usd": 300,
-    "check_interval_sec": 60
+    "target_usd": 400,
+    "check_interval_sec": 60,
+    "xlsx_path": "docs_Monitorig\\PowerBIData.xlsx",
+    "sheet_name": "Actual",
+    "subtype_column": "Subtype",
+    "data_column": "Out",
+    "filter_value": "Ebook"
   },
   "others": {
     "_comment": "Pending to define. Add new monitoring sections here following the same pattern: name, check_interval_sec, thresholds [ { level, condition/value, actions [] } ]",
